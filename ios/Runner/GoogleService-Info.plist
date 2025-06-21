@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>542454686258-n04ll8jppia75gscjqev51hkl4l4olvc.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.542454686258-n04ll8jppia75gscjqev51hkl4l4olvc</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>542454686258-10e0l0u7lo299as45fdnh82prdqofnte.apps.googleusercontent.com</string>
+	<key>API_KEY</key>
+	<string>AIzaSyBBQhwewl-lfn6aymi981BlamA5G-iZcVQ</string>
+	<key>GCM_SENDER_ID</key>
+	<string>542454686258</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.hejtech.lifelab</string>
+	<key>PROJECT_ID</key>
+	<string>lifeapp-ed7d1</string>
+	<key>STORAGE_BUCKET</key>
+	<string>lifeapp-ed7d1.appspot.com</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:542454686258:ios:a6604994ad34144b06122b</string>
+</dict>
+</plist>
