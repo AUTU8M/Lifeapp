@@ -1,0 +1,2 @@
+C:/Users/pc/Desktop/lifeapp3-3.0.18/android/app/.cxx/Debug/4i484t5y/x86_64/CMakeFiles/edit_cache.dir
+C:/Users/pc/Desktop/lifeapp3-3.0.18/android/app/.cxx/Debug/4i484t5y/x86_64/CMakeFiles/rebuild_cache.dir
