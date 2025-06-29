@@ -34,7 +34,6 @@ class LevelChallengePage extends StatefulWidget {
 class _LevelChallengePageState extends State<LevelChallengePage> {
 
   void checkNavigation() async {
-    print("Widget : ${widget.navName}");
 
     Map<String,dynamic> data = {
       "type": 1,

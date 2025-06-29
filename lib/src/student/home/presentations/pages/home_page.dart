@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:lifelab3/src/common/widgets/loading_widget.dart';
 import 'package:lifelab3/src/student/home/presentations/widgets/home_mission_widget.dart';
@@ -7,7 +6,7 @@ import 'package:lifelab3/src/student/home/provider/dashboard_provider.dart';
 import 'package:new_version_plus/new_version_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-
+import 'package:flutter/services.dart';
 import '../../../../common/helper/color_code.dart';
 import '../widgets/explore_challenges_widget.dart';
 import '../widgets/explore_subjects_widget.dart';
@@ -16,6 +15,7 @@ import '../widgets/home_drawer.dart';
 import '../widgets/invire_friend_widget.dart';
 import '../widgets/mentor_connect_widget.dart';
 import '../widgets/reward_widget.dart';
+import '../widgets/campaign_widget.dart'; // Make sure this is your CampaignSliderWidget
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -25,9 +25,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-
   String appUrl = "";
-
   bool isAppUpdate = false;
 
   void checkStoreAppVersion() async {
@@ -35,81 +33,94 @@ class _HomePageState extends State<HomePage> {
       androidId: "com.life.lab",
       iOSId: "com.hejtech.lifelab",
     ).getVersionStatus();
+
     isAppUpdate = status?.canUpdate ?? false;
     appUrl = status?.appStoreLink ?? "";
     debugPrint("Version: ${status?.canUpdate ?? false}");
-    setState(() {
 
-    });
-    if(isAppUpdate) {
+    if (isAppUpdate) {
       showMsgDialog();
     }
   }
 
   @override
   void initState() {
-    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       checkStoreAppVersion();
-      Provider.of<DashboardProvider>(context, listen: false).storeToken();
-      Provider.of<DashboardProvider>(context, listen: false).getDashboardData();
-      Provider.of<DashboardProvider>(context, listen: false).getSubjectsData();
-      Provider.of<DashboardProvider>(context, listen: false).checkSubscription();
+      final provider = Provider.of<DashboardProvider>(context, listen: false);
+      provider.storeToken();
+      provider.getDashboardData();
+      provider.getTodayCampaigns(); // Fetch campaigns
+      provider.getSubjectsData();
+      provider.checkSubscription();
     });
     super.initState();
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      statusBarColor: Colors.white, // set status bar color to white
+      statusBarIconBrightness: Brightness.dark, // dark icons for light background
+    ));
   }
 
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<DashboardProvider>(context);
-    return Scaffold(
-      drawer: provider.dashboardModel != null ? DrawerView(
-        coin: provider.dashboardModel!.data!.user!.earnCoins!.toString(),
-        name: provider.dashboardModel!.data!.user!.name ?? "",
-      ) : null,
-      body: provider.dashboardModel != null
-          ? SingleChildScrollView(
-              padding: const EdgeInsets.only(left: 15, right: 15),
-              child: Column(
-                children: [
+
+      return Scaffold(
+        drawer: provider.dashboardModel != null
+            ? DrawerView(
+          coin: provider.dashboardModel!.data!.user!.earnCoins!.toString(),
+          name: provider.dashboardModel!.data!.user!.name ?? "",
+        )
+            : null,
+        body: SafeArea(  // <-- Wrap the body in SafeArea here
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.only(left: 15, right: 15),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (provider.dashboardModel != null)
                   HomeAppBar(
                     name: provider.dashboardModel!.data!.user!.name ?? "",
                     img: provider.dashboardModel!.data!.user!.imagePath,
                   ),
 
-                  // if(isAppUpdate) AppUpdateWidget(appUrl: appUrl),
+                const SizedBox(height: 20),
 
-                  const SizedBox(height: 30),
+                if (provider.dashboardModel != null)
                   RewardsWidget(
                     coin: provider.dashboardModel!.data!.user!.earnCoins!.toString(),
                     friends: provider.dashboardModel!.data!.user!.friends!.toString(),
                     ranking: provider.dashboardModel!.data!.user!.userRank!.toString(),
                   ),
 
-                  const SizedBox(height: 30),
-                  if(provider.dashboardModel != null) HomeMissionWidget(dashboardModel: provider.dashboardModel!),
+                const SizedBox(height: 20),
 
-                  const SizedBox(height: 20),
-                  if(provider.subjectModel != null) ExploreSubjectsWidget(
+                if (provider.campaigns.isNotEmpty)
+                  const CampaignSliderWidget(),
+
+                const SizedBox(height: 20),
+
+                if (provider.subjectModel != null)
+                  ExploreSubjectsWidget(
                     subjects: provider.subjectModel!.data!.subject!,
                   ),
 
-                  const SizedBox(height: 20),
-                  const ExploreChallengesWidget(),
-                  const SizedBox(height: 30),
-                  MentorConnectWidget(),
-                  // const SizedBox(height: 30),
-                  // const AskQuestionWidget(),
-                  // const SizedBox(height: 30),
-                  // const MoodMeterWidget(),
-                  const SizedBox(height: 30),
+                const SizedBox(height: 20),
+                const ExploreChallengesWidget(),
+                const SizedBox(height: 30),
+                MentorConnectWidget(),
+                const SizedBox(height: 30),
+
+                if (provider.dashboardModel != null)
                   InviteFriendWidget(name: provider.dashboardModel!.data!.user!.name!),
-                  const SizedBox(height: 80),
-                ],
-              ),
-            )
-          : const LoadingWidget(),
-    );
-  }
+
+                const SizedBox(height: 80),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
   void showMsgDialog() {
     showGeneralDialog(
@@ -141,7 +152,6 @@ class _HomePageState extends State<HomePage> {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-
                   const SizedBox(height: 10),
                   const Text(
                     "A new version of the app is available",
@@ -151,11 +161,10 @@ class _HomePageState extends State<HomePage> {
                     ),
                     textAlign: TextAlign.center,
                   ),
-
                   const SizedBox(height: 40),
                   InkWell(
                     onTap: () {
-                      if(Platform.isAndroid) {
+                      if (Platform.isAndroid) {
                         launch(appUrl);
                       } else {
                         launchUrl(Uri.parse(appUrl));
@@ -189,13 +198,7 @@ class _HomePageState extends State<HomePage> {
         );
       },
       transitionBuilder: (_, anim, __, child) {
-        Tween<Offset> tween;
-        if (anim.status == AnimationStatus.reverse) {
-          tween = Tween(begin: const Offset(-1, 0), end: Offset.zero);
-        } else {
-          tween = Tween(begin: const Offset(1, 0), end: Offset.zero);
-        }
-
+        final tween = Tween(begin: const Offset(1, 0), end: Offset.zero);
         return SlideTransition(
           position: tween.animate(anim),
           child: FadeTransition(

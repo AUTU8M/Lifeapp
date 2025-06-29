@@ -9,8 +9,9 @@ import 'package:lifelab3/src/student/home/models/subject_model.dart';
 import 'package:lifelab3/src/student/home/services/dashboard_services.dart';
 import 'package:lifelab3/src/teacher/teacher_tool/services/tool_services.dart';
 import 'package:lifelab3/src/utils/storage_utils.dart';
-
+import 'package:lifelab3/src/student/home/models/campaign_model.dart';
 import '../../../common/helper/color_code.dart';
+
 
 class DashboardProvider extends ChangeNotifier {
 
@@ -18,8 +19,17 @@ class DashboardProvider extends ChangeNotifier {
   SubjectModel? subjectModel;
   CoinsHistoryModel? coinsHistoryModel;
 
+  List<Campaign> _campaigns = [];
+  List<Campaign> get campaigns => _campaigns;
+
   String? subscribeCode;
 
+  // Fetch campaigns
+  Future<void> getTodayCampaigns() async {
+    _campaigns = await DashboardServices().getTodayCampaigns();
+    notifyListeners();
+
+  }
   Future<void> getDashboardData() async {
     Response response = await DashboardServices().getDashboardData();
 

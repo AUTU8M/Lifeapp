@@ -6,7 +6,7 @@ import 'package:flutter_overlay_loader/flutter_overlay_loader.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:lifelab3/src/common/helper/string_helper.dart';
 import 'package:lifelab3/src/utils/storage_utils.dart';
-
+import 'package:lifelab3/src/student/home/models/campaign_model.dart';
 import '../../../common/helper/api_helper.dart';
 
 class DashboardServices {
@@ -43,7 +43,35 @@ class DashboardServices {
       Fluttertoast.showToast(msg: StringHelper.tryAgainLater);
     }
   }
+  Future<List<Campaign>> getTodayCampaigns() async {
+    try {
+      final token = await StorageUtil.getString(StringHelper.token);
+      final response = await dio.get(
+        "https://api.life-lab.org/v3/campaigns/today",
+        options: Options(
+          contentType: "application/json",
+          headers: {
+            HttpHeaders.acceptHeader: "application/json",
+            HttpHeaders.authorizationHeader: "Bearer $token"
+          },
+        ),
+      );
 
+      if (response.statusCode == 200) {
+        final data = response.data;
+        if (data["campaigns"] != null && data["campaigns"] is List) {
+          return (data["campaigns"] as List)
+              .map((e) => Campaign.fromJson(e))
+              .toList();
+        }
+      }
+
+      return [];
+    } catch (e) {
+      debugPrint("Error fetching campaigns: $e");
+      return [];
+    }
+  }
   Future getSubjectData() async {
     try {
       Response response = await dio.get(

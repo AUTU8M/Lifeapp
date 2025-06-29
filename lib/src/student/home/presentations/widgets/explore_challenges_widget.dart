@@ -8,7 +8,6 @@ import 'package:lifelab3/src/student/home/presentations/pages/subscribe_page.dar
 import '../../../../common/helper/string_helper.dart';
 import '../../../../utils/storage_utils.dart';
 import '../../../subject_list/presentation/page/subject_list_page.dart';
-import '../../../vision/presentations/subjects_page.dart';
 
 class ExploreChallengesWidget extends StatelessWidget {
   const ExploreChallengesWidget({super.key});

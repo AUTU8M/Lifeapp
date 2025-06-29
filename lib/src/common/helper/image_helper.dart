@@ -26,6 +26,7 @@ class ImageHelper {
   static const String financeIcon = "assets/images/finance_icon.png";
   static const String missionIcon = "assets/images/mission_icon.png";
   static const String visionIcon = "assets/images/vision_icon.png";
+  static const String visionIcon2 = "assets/images/visionicon2.png";
   static const String quizIcon = "assets/images/quiz_icon.png";
   static const String jigyasaIcon = "assets/images/jigyasa_icon.png";
   static const String pragyaIcon = "assets/images/pragya_icon.png";

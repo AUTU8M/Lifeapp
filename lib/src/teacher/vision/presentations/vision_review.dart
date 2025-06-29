@@ -176,7 +176,7 @@ class _VisionReviewPageState extends State<VisionReviewPage> with SingleTickerPr
   late TabController _tabController;
   List<StudentSubmission> _allSubmissions = [];
   List<StudentSubmission> _filteredSubmissions = [];
-  String _selectedClassFilter = '1'; // Default to class 1
+  String _selectedClassFilter = ''; // Default to class 1
   List<String> _availableClasses = [];
   String _selectedStatusFilter = '';
   bool _isLoading = false;

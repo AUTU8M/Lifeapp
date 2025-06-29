@@ -145,6 +145,8 @@ class StringHelper {
   static const String time = "Time";
   static const String addNew = "+ add new";
 
+  // Vision
+  static const String navName = "Vision";
   /// [Teacher]
   static const String teacherMsg = "Please enter the mobile number";
   static const String signUp = "Signup!";

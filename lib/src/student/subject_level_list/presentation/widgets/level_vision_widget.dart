@@ -3,7 +3,6 @@ import 'package:lifelab3/src/common/helper/image_helper.dart';
 import 'package:lifelab3/src/common/widgets/common_navigator.dart';
 import 'package:lifelab3/src/student/subject_level_list/provider/subject_level_provider.dart';
 import 'package:lifelab3/src/student/vision/presentations/vision_page.dart';
-import '../../../vision/presentations/vision_page.dart';
 import '../../../../common/helper/color_code.dart';
 import '../../../../common/helper/string_helper.dart';
 import '../../../mission/presentations/pages/mission_page.dart';
@@ -85,7 +84,7 @@ class LevelVisionWidget extends StatelessWidget {
                 height: 130,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: const Color(0xffffa500),
+                  color: const Color(0xFFFFF1B0),
                   borderRadius: BorderRadius.circular(25),
                 ),
               ),
@@ -106,14 +105,11 @@ class LevelVisionWidget extends StatelessWidget {
                 left: 20,
                 child: InkWell(
                   onTap: () {
-
-
-                    print('suus $subjectId');
                     push(
                       context: context,
                       page: VisionPage(
                         navName: 'Vision',
-                        subjectName: subjectId,
+                        subjectId: subjectId,
                         levelId: levelId,
                       ),
                     );
@@ -139,13 +135,13 @@ class LevelVisionWidget extends StatelessWidget {
                 ),
               ),
               Positioned(
-                right: 20,
-                bottom: 10,
+                right: 0,
+                bottom: 5,
                 child: Container(
                   alignment: Alignment.topRight,
                   height: 140,
                   child: Image.asset(
-                    ImageHelper.visionIcon,
+                    ImageHelper.visionIcon2,
                   ),
                 ),
               ),

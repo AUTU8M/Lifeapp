@@ -26,7 +26,6 @@ class VisionAPIService {
   }
   Future<void> debugStorageState() async {
     debugPrint('🔧 === STORAGE DEBUG SESSION ===');
-
     try {
       // Test basic storage functionality
       final testKey = 'debug_test_${DateTime.now().millisecondsSinceEpoch}';

@@ -26,7 +26,6 @@ class SubjectDetailsWidget extends StatelessWidget {
           PersistentNavBarNavigator.pushNewScreen(
               context,
               screen: SubjectLevelListPage(
-                subjectName: provider.subjectModel!.data!.subject![index].title!,
                 subjectId: provider.subjectModel!.data!.subject![index].id!.toString(),
                 navname: navName,
               ),

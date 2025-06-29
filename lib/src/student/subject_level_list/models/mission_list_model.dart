@@ -34,6 +34,7 @@ class MissionListModel {
 class Data {
   Missions? missions;
 
+
   Data({
     this.missions,
   });
@@ -41,6 +42,7 @@ class Data {
   factory Data.fromJson(Map<String, dynamic> json) => Data(
     missions: json["missions"] == null ? null : Missions.fromJson(json["missions"]),
   );
+
 
   Map<String, dynamic> toJson() => {
     "missions": missions?.toJson(),

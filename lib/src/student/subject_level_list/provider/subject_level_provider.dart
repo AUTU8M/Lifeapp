@@ -31,9 +31,9 @@ class SubjectLevelProvider extends ChangeNotifier {
   Future<void> getMission(Map<String, dynamic> data, {params}) async {
     Response response = await LevelListService().getMissionData(
       type: data["type"],
-      subjectId: data["la_subject_id"],
-      levelId: data["la_level_id"],
-      params: params ?? ""
+        subjectId: data["la_subject_id"]?.toString() ?? '',
+        levelId: data["la_level_id"]?.toString() ?? '',
+        params: params ?? ""
     );
     if(response.statusCode == 200) {
       missionListModel = MissionListModel.fromJson(response.data);

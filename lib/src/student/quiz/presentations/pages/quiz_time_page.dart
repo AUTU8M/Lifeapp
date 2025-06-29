@@ -173,7 +173,7 @@ class _TimeQuizPageState extends State<TimeQuizPage> {
       margin: EdgeInsets.only(
         left: 20,
         right: 20,
-        bottom: MediaQuery.of(context).padding.bottom + 10,
+        bottom: MediaQuery.of(context).padding.bottom + 40,
       ),
       alignment: Alignment.center,
       decoration: BoxDecoration(

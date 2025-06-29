@@ -86,7 +86,6 @@ class SubjectWidget extends StatelessWidget {
         push(
           context: context,
           page: SubjectLevelListPage(
-            subjectName: name,
             subjectId: subjectId,
             navname: "",
           ),

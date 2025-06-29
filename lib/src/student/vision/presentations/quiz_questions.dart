@@ -1,5 +1,4 @@
   import 'package:flutter/material.dart';
-import 'package:lifelab3/src/student/vision/presentations/subjects_page.dart';
   import 'package:provider/provider.dart';
   import 'package:image_picker/image_picker.dart';
   import 'dart:io';
@@ -14,7 +13,7 @@ import '../providers/vision_provider.dart';
     final String visionId;
     final Function? onReplayVideo;
     final String navName;
-    final String subjectName;
+    final String subjectId;
 
     const QuizScreen({
       super.key,
@@ -22,7 +21,7 @@ import '../providers/vision_provider.dart';
       required this.visionId,
       this.onReplayVideo,
       required this.navName,
-      required this.subjectName,
+      required this.subjectId,
     });
 
     @override
@@ -34,7 +33,7 @@ import '../providers/vision_provider.dart';
           visionId: visionId,
           onReplayVideo: onReplayVideo,
           navName: navName,
-          subjectName: subjectName,
+          subjectId: subjectId,
         ),
       );
     }
@@ -63,7 +62,7 @@ import '../providers/vision_provider.dart';
     final String visionId;
     final Function? onReplayVideo;
     final String navName;
-    final String subjectName;
+    final String subjectId;
 
     const Question1Screen({
       super.key,
@@ -71,7 +70,7 @@ import '../providers/vision_provider.dart';
       required this.visionId,
       this.onReplayVideo,
       required this.navName,
-      required this.subjectName,
+      required this.subjectId,
     });
 
     @override
@@ -143,7 +142,7 @@ import '../providers/vision_provider.dart';
         String visionId, {
           Function? onReplayVideo,
           required String navName,
-          required String subjectName,
+          required String subjectId,
         }) {
       Navigator.push(
         context,
@@ -154,7 +153,7 @@ import '../providers/vision_provider.dart';
             visionId: visionId,
             onReplayVideo: onReplayVideo,
             navName: navName,
-            subjectName: subjectName,
+            subjectId: subjectId,
           ),
         ),
       );
@@ -206,7 +205,7 @@ import '../providers/vision_provider.dart';
                     answers: const [],
                     onReplayVideo: widget.onReplayVideo,
                     navName: widget.navName,
-                    subjectName: widget.subjectName,
+                    subjectId: widget.subjectId,
                   ),
                 ),
               ),
@@ -224,7 +223,7 @@ import '../providers/vision_provider.dart';
                     answers: const [],
                     onReplayVideo: widget.onReplayVideo,
                     navName: widget.navName,
-                    subjectName: widget.subjectName,
+                    subjectId: widget.subjectId,
                   ),
                 ),
               ),
@@ -384,7 +383,7 @@ import '../providers/vision_provider.dart';
                     answers: answers,
                     onReplayVideo: widget.onReplayVideo,
                     navName: widget.navName,
-                    subjectName: widget.subjectName,
+                    subjectId: widget.subjectId,
                   ),
                 ),
               ),
@@ -402,7 +401,7 @@ import '../providers/vision_provider.dart';
                     answers: answers,
                     onReplayVideo: widget.onReplayVideo,
                     navName: widget.navName,
-                    subjectName: widget.subjectName,
+                    subjectId: widget.subjectId,
                   ),
                 ),
               ),
@@ -440,7 +439,7 @@ import '../providers/vision_provider.dart';
                       answer : answers,
                       quizResult: result?['quiz_result'] as Map<String, dynamic>?,
                       navName: widget.navName,
-                      subjectName: widget.subjectName,
+                      subjectId: widget.subjectId,
                     ),
                   ),
             ),
@@ -536,7 +535,7 @@ import '../providers/vision_provider.dart';
               visionId: widget.visionId,
               onReplayVideo: widget.onReplayVideo,
               navName: widget.navName,
-              subjectName: widget.subjectName,
+              subjectId: widget.subjectId,
             ),
           ),
         ),
@@ -551,7 +550,7 @@ import '../providers/vision_provider.dart';
     final List<Map<String, dynamic>> answers;
     final Function? onReplayVideo;
     final String navName;
-    final String subjectName;
+    final String subjectId;
 
     const Question2Screen({
       super.key,
@@ -561,7 +560,7 @@ import '../providers/vision_provider.dart';
       required this.answers,
       this.onReplayVideo,
       required this.navName,
-      required this.subjectName,
+      required this.subjectId,
     });
 
     @override
@@ -605,7 +604,7 @@ import '../providers/vision_provider.dart';
                     answers: widget.answers,
                     onReplayVideo: widget.onReplayVideo,
                     navName: widget.navName,
-                    subjectName: widget.subjectName,
+                    subjectId: widget.subjectId,
                   ),
                 ),
               ),
@@ -741,7 +740,7 @@ import '../providers/vision_provider.dart';
                 answers: _answers,
                 onReplayVideo: widget.onReplayVideo,
                 navName: widget.navName,
-                subjectName: widget.subjectName,
+                subjectId: widget.subjectId,
               ),
             ),
           ),
@@ -807,16 +806,13 @@ import '../providers/vision_provider.dart';
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => VisionPage(
-                          navName: widget.navName,
-                          subjectName: widget.subjectName,
-                          levelId: '1',
-                        ),
+                        builder: (context) => NavBarPage(currentIndex: 0),
                       ),
                     );
                   },
+
                   child: const Text(
-                    'Vision',
+                    'Done',
                     style: TextStyle(color: Colors.white, fontSize: 16),
                   ),
                 ),
@@ -878,7 +874,7 @@ import '../providers/vision_provider.dart';
               visionId: widget.visionId,
               onReplayVideo: widget.onReplayVideo,
               navName: widget.navName,
-              subjectName: widget.subjectName,
+              subjectId: widget.subjectId,
             ),
           ),
         ),
@@ -893,7 +889,7 @@ import '../providers/vision_provider.dart';
     final List<Map<String, dynamic>> answers;
     final Function? onReplayVideo;
     final String navName;
-    final String subjectName;
+    final String subjectId;
 
     const Question3Screen({
       super.key,
@@ -903,7 +899,7 @@ import '../providers/vision_provider.dart';
       required this.answers,
       this.onReplayVideo,
       required this.navName,
-      required this.subjectName,
+      required this.subjectId,
     });
 
     @override
@@ -963,7 +959,7 @@ import '../providers/vision_provider.dart';
     Future<void> _pickImageFromSource(ImageSource source) async {
       try {
         final XFile? image = await _picker.pickImage(source: source);
-        if (image != null) {
+        if (image != null && mounted) {
           setState(() {
             _imageFile = image;
           });
@@ -1019,7 +1015,7 @@ import '../providers/vision_provider.dart';
                             style: ElevatedButton.styleFrom(
                               minimumSize: const Size(double.infinity, 50),
                             ),
-                            child: const Text('Select Image from Gallery'),
+                            child: const Text('Upload Image or Take a Photo'),
                           ),
 
                           const SizedBox(height: 20),
@@ -1203,17 +1199,12 @@ import '../providers/vision_provider.dart';
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => VisionPage(
-                          navName: widget.navName,
-                          subjectName: widget.subjectName,
-                          levelId: '1',
-
-                        ),
+                        builder: (context) => NavBarPage(currentIndex: 0),
                       ),
                     );
                   },
                   child: const Text(
-                    'Go to Vision',
+                    'Done',
                     style: TextStyle(color: Colors.white, fontSize: 16),
                   ),
                 ),
@@ -1241,7 +1232,7 @@ import '../providers/vision_provider.dart';
             visionId: widget.visionId,
             onReplayVideo: widget.onReplayVideo,
             navName: widget.navName,
-            subjectName: widget.subjectName,
+            subjectId: widget.subjectId,
           ),
 
         ),
@@ -1255,7 +1246,7 @@ import '../providers/vision_provider.dart';
     final int earnedCoins;
     final Map<String, dynamic>? quizResult;
     final String navName;
-    final String subjectName;
+    final String subjectId;
     final List<Map<String, dynamic>> answer;
 
     const QuizCompletedScreen({
@@ -1265,7 +1256,7 @@ import '../providers/vision_provider.dart';
       required this.earnedCoins,
       this.quizResult,
       required this.navName,
-      required this.subjectName, required this.answer,
+      required this.subjectId, required this.answer,
     });
 
     @override
@@ -1457,7 +1448,7 @@ import '../providers/vision_provider.dart';
                                             videoTitle: widget.videoTitle,
                                             visionId: widget.visionId,
                                             navName: widget.navName,
-                                            subjectName: widget.subjectName,
+                                            subjectId: widget.subjectId,
                                           ),
                                         ),
                                       ),
@@ -1622,13 +1613,13 @@ import '../providers/vision_provider.dart';
                       onPressed: () {
                         Provider.of<VisionProvider>(context, listen: false)
                             .clearQuizQuestions();
-                        Navigator.pushReplacement(
+                        Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => VisionPage(
                               navName: widget.navName,
-                              subjectName: widget.subjectName,
-                              levelId: '1',
+                              subjectId: widget.subjectId,
+                              levelId: '',
 
                             ),
 
@@ -1677,14 +1668,14 @@ import '../providers/vision_provider.dart';
     final String visionId;
     final Function? onReplayVideo;
     final String navName;
-    final String subjectName;
+    final String subjectId;
 
     const SkipWarningScreen({
       super.key,
       required this.visionId,
       this.onReplayVideo,
       required this.navName,
-      required this.subjectName,
+      required this.subjectId,
     });
 
     @override
@@ -1852,7 +1843,7 @@ import '../providers/vision_provider.dart';
       String visionId, {
         Function? onReplayVideo,
         required String navName,
-        required String subjectName,
+        required String subjectId,
       }) {
     Navigator.push(
       context,
@@ -1865,7 +1856,7 @@ import '../providers/vision_provider.dart';
             visionId: visionId,
             onReplayVideo: onReplayVideo,
             navName: navName,
-            subjectName: subjectName,
+            subjectId: subjectId,
           ),
         ),
       ),

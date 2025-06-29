@@ -8,190 +8,137 @@ import '../../../mission/presentations/pages/submit_mission_page.dart';
 
 class HomeMissionWidget extends StatelessWidget {
   final DashboardModel dashboardModel;
-
   const HomeMissionWidget({super.key, required this.dashboardModel});
-
+  String getButtonText() {
+    final submission = dashboardModel.data!.user!.baloonCarMission!.submission;
+    if (submission != null && submission.approvedAt != null) {
+      return "Completed";
+    } else if (submission != null &&
+        submission.approvedAt == null &&
+        submission.rejectedAt == null) {
+      return "In Review";
+    } else if (submission != null && submission.rejectedAt != null) {
+      return "Rejected";
+    } else {
+      return "Start";
+    }
+  }
   @override
   Widget build(BuildContext context) {
+    final submission = dashboardModel.data!.user!.baloonCarMission!.submission;
+
+    void _handleTap() {
+      if (submission != null && submission.approvedAt != null) {
+        Fluttertoast.showToast(msg: "Already Completed");
+      } else if (submission != null &&
+          submission.approvedAt == null &&
+          submission.rejectedAt == null) {
+        Fluttertoast.showToast(msg: "In review");
+      } else {
+        final model = MissionDatum.fromJson(
+            dashboardModel.data!.user!.baloonCarMission!.toJson());
+        push(context: context, page: SubmitMissionPage(mission: model));
+      }
+    }
     return InkWell(
-      onTap: () {
-        if (dashboardModel.data!.user!.baloonCarMission!.submission != null &&
-            dashboardModel
-                    .data!.user!.baloonCarMission!.submission!.approvedAt !=
-                null) {
-          Fluttertoast.showToast(msg: "Already Completed");
-        } else if (dashboardModel.data!.user!.baloonCarMission!.submission !=
-                null &&
-            dashboardModel
-                    .data!.user!.baloonCarMission!.submission!.approvedAt ==
-                null &&
-            dashboardModel
-                    .data!.user!.baloonCarMission!.submission!.rejectedAt ==
-                null) {
-          Fluttertoast.showToast(msg: "In review");
-        } else if (dashboardModel.data!.user!.baloonCarMission!.submission !=
-                null &&
-            dashboardModel
-                    .data!.user!.baloonCarMission!.submission!.rejectedAt !=
-                null) {
-          MissionDatum model = MissionDatum.fromJson(
-              dashboardModel.data!.user!.baloonCarMission!.toJson());
-          push(
-            context: context,
-            page: SubmitMissionPage(mission: model),
-          );
-        } else {
-          MissionDatum model = MissionDatum.fromJson(
-              dashboardModel.data!.user!.baloonCarMission!.toJson());
-          push(
-            context: context,
-            page: SubmitMissionPage(mission: model),
-          );
-        }
-      },
+      onTap: _handleTap,
       splashColor: Colors.transparent,
       highlightColor: Colors.transparent,
       child: Stack(
-        alignment: Alignment.center,
         children: [
-          Image.asset("assets/images/bce.png"),
+          // --- Background image -------------------------------------------------
+          ClipRRect(
+            borderRadius: BorderRadius.circular(15),
+            child: Image.asset(
+              "assets/images/gappu_bobo_1.png",
+              width: double.infinity,
+              height: 180,
+              fit: BoxFit.cover,
+            ),
+          ),
+
+          // --- Left-to-right dark overlay ---------------------------------------
+          Container(
+            width: double.infinity,
+            height: 180,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(15),
+              gradient: LinearGradient(
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+                colors: [
+                  Colors.black.withOpacity(0.6), // bottom
+                  Colors.transparent,            // top
+                ],
+              ),
+
+            ),
+          ),
+
+          // --- Bottom row with text + button ------------------------------------
           Positioned(
+            left: 10,
+            right: 10,
             bottom: 10,
-            child: CustomButton(
-              name: dashboardModel.data!.user!.baloonCarMission!.submission !=
-                          null &&
-                      dashboardModel.data!.user!.baloonCarMission!.submission!
-                              .approvedAt !=
-                          null
-                  ? "Completed"
-                  : dashboardModel.data!.user!.baloonCarMission!.submission !=
-                              null &&
-                          dashboardModel.data!.user!.baloonCarMission!
-                                  .submission!.approvedAt ==
-                              null &&
-                          dashboardModel.data!.user!.baloonCarMission!
-                                  .submission!.rejectedAt ==
-                              null
-                      ? "In review"
-                      : dashboardModel.data!.user!.baloonCarMission!
-                                      .submission !=
-                                  null &&
-                              dashboardModel.data!.user!.baloonCarMission!
-                                      .submission!.rejectedAt !=
-                                  null
-                          ? "Rejected"
-                          : "Start",
-              height: 40,
-              width: MediaQuery.of(context).size.width - 60,
-              color: Colors.white,
-              textColor: Colors.blue,
-              onTap: () {
-                if (dashboardModel.data!.user!.baloonCarMission!.submission !=
-                        null &&
-                    dashboardModel.data!.user!.baloonCarMission!.submission!
-                            .approvedAt !=
-                        null) {
-                  Fluttertoast.showToast(msg: "Already Completed");
-                } else if (dashboardModel
-                            .data!.user!.baloonCarMission!.submission !=
-                        null &&
-                    dashboardModel.data!.user!.baloonCarMission!.submission!
-                            .approvedAt ==
-                        null &&
-                    dashboardModel.data!.user!.baloonCarMission!.submission!
-                            .rejectedAt ==
-                        null) {
-                  Fluttertoast.showToast(msg: "In review");
-                } else if (dashboardModel
-                            .data!.user!.baloonCarMission!.submission !=
-                        null &&
-                    dashboardModel.data!.user!.baloonCarMission!.submission!
-                            .rejectedAt !=
-                        null) {
-                  MissionDatum model = MissionDatum.fromJson(
-                      dashboardModel.data!.user!.baloonCarMission!.toJson());
-                  push(
-                    context: context,
-                    page: SubmitMissionPage(mission: model),
-                  );
-                } else {
-                  MissionDatum model = MissionDatum.fromJson(
-                      dashboardModel.data!.user!.baloonCarMission!.toJson());
-                  push(
-                    context: context,
-                    page: SubmitMissionPage(mission: model),
-                  );
-                }
-              },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                // Text block (all white)
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Text(
+                        "Daily Challenges Await",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 19,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        "Compete & climb the leaderboard today",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Action button with border
+                // 2️⃣  Then swap only the child of the ElevatedButton:
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.blue,
+                    side: const BorderSide(color: Colors.blue),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                  ),
+                  onPressed: _handleTap,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(getButtonText()),
+                      if (getButtonText() == "Start") ...[
+                        const SizedBox(width: 4),
+                        const Icon(Icons.arrow_forward, size: 14),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
   }
-
-// Widget _car() => Container(
-//   width: MediaQuery.of(context).size.width,
-//   padding: const EdgeInsets.all(15),
-//   decoration: BoxDecoration(
-//     borderRadius: BorderRadius.circular(15),
-//     color: const Color(0xffFEE598),
-//   ),
-//   child: Column(
-//     children: [
-//       Row(
-//         mainAxisAlignment: MainAxisAlignment.center,
-//         children: [
-//           Image.network(
-//             ApiHelper.imgBaseUrl + dashboardModel.data!.user!.baloonCarMission!.image!.url!,
-//             width: MediaQuery.of(context).size.width * .3,
-//           ),
-//           RichText(
-//             text: TextSpan(
-//               text: dashboardModel.data!.user!.baloonCarMission!.title ?? '',
-//               style: const TextStyle(
-//                 color: Colors.black,
-//                 fontWeight: FontWeight.bold,
-//                 fontSize: 20,
-//               ),
-//             ),
-//           ),
-//         ],
-//       ),
-//       CustomButton(
-//         name: dashboardModel.data!.user!.baloonCarMission!.submission != null && dashboardModel.data!.user!.baloonCarMission!.submission!.approvedAt != null
-//             ? "Completed"
-//             : dashboardModel.data!.user!.baloonCarMission!.submission != null && dashboardModel.data!.user!.baloonCarMission!.submission!.approvedAt == null && dashboardModel.data!.user!.baloonCarMission!.submission!.rejectedAt == null
-//             ? "In review"
-//             : dashboardModel.data!.user!.baloonCarMission!.submission != null && dashboardModel.data!.user!.baloonCarMission!.submission!.rejectedAt != null
-//             ? "Rejected"
-//             : "Start",
-//         height: 40,
-//         width: MediaQuery.of(context).size.width * .7,
-//         color: Colors.blue,
-//         onTap: () {
-//           if(dashboardModel.data!.user!.baloonCarMission!.submission != null && dashboardModel.data!.user!.baloonCarMission!.submission!.approvedAt != null) {
-//             Fluttertoast.showToast(msg: "Already Completed");
-//           } else  if(dashboardModel.data!.user!.baloonCarMission!.submission != null && dashboardModel.data!.user!.baloonCarMission!.submission!.approvedAt == null && dashboardModel.data!.user!.baloonCarMission!.submission!.rejectedAt == null) {
-//             Fluttertoast.showToast(msg: "In review");
-//           } else if(dashboardModel.data!.user!.baloonCarMission!.submission != null && dashboardModel.data!.user!.baloonCarMission!.submission!.rejectedAt != null) {
-//             MissionDatum model = MissionDatum.fromJson(dashboardModel.data!.user!.baloonCarMission!.toJson());
-//             push(
-//               context: context,
-//               page: SubmitMissionPage(mission: model),
-//             );
-//           } else {
-//             MissionDatum model = MissionDatum.fromJson(dashboardModel.data!.user!.baloonCarMission!.toJson());
-//             push(
-//               context: context,
-//               page: SubmitMissionPage(mission: model),
-//             );
-//           }
-//
-//
-//         },
-//       ),
-//     ],
-//   ),
-// );
 }

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart'; // for debugPrint
+
 class NotificationModel {
   final int? status;
   final List<NotificationData>? data;
@@ -11,13 +13,20 @@ class NotificationModel {
 
   NotificationModel.fromJson(Map<String, dynamic> json)
       : status = json['status'] as int?,
-        data = (json['data'] as List?)?.map((dynamic e) => NotificationData.fromJson(e as Map<String,dynamic>)).toList(),
-        message = json['message'] as String?;
+        data = (json['data'] as List?)
+            ?.map((dynamic e) {
+          debugPrint('NotificationModel.fromJson: notification raw data: $e');
+          return NotificationData.fromJson(e as Map<String, dynamic>);
+        })
+            .toList(),
+        message = json['message'] as String? {
+    debugPrint('NotificationModel.fromJson: status=$status, message=$message');
+  }
 
   Map<String, dynamic> toJson() => {
-    'status' : status,
-    'data' : data?.map((e) => e.toJson()).toList(),
-    'message' : message
+    'status': status,
+    'data': data?.map((e) => e.toJson()).toList(),
+    'message': message,
   };
 }
 
@@ -30,6 +39,7 @@ class NotificationData {
   final dynamic readAt;
   final String? createdAt;
   final String? updatedAt;
+  final String? subjectId;
 
   NotificationData({
     this.id,
@@ -40,6 +50,7 @@ class NotificationData {
     this.readAt,
     this.createdAt,
     this.updatedAt,
+    this.subjectId,
   });
 
   NotificationData.fromJson(Map<String, dynamic> json)
@@ -47,20 +58,31 @@ class NotificationData {
         type = json['type'] as String?,
         notifiableType = json['notifiable_type'] as String?,
         notifiableId = json['notifiable_id'] as int?,
-        data = (json['data'] as Map<String,dynamic>?) != null ? NotificationInner1Data.fromJson(json['data'] as Map<String,dynamic>) : null,
+        data = (json['data'] as Map<String, dynamic>?) != null
+            ? NotificationInner1Data.fromJson(json['data'] as Map<String, dynamic>)
+            : null,
         readAt = json['read_at'],
         createdAt = json['created_at'] as String?,
-        updatedAt = json['updated_at'] as String?;
+        updatedAt = json['updated_at'] as String?,
+        subjectId = (json['data'] != null
+            ? NotificationInner1Data.fromJson(json['data'] as Map<String, dynamic>)
+            : null)
+            ?.data
+            ?.laSubjectId
+            ?.toString() {
+    debugPrint('NotificationData.fromJson: id=$id, type=$type, subjectId=$subjectId');
+  }
 
   Map<String, dynamic> toJson() => {
-    'id' : id,
-    'type' : type,
-    'notifiable_type' : notifiableType,
-    'notifiable_id' : notifiableId,
-    'data' : data?.toJson(),
-    'read_at' : readAt,
-    'created_at' : createdAt,
-    'updated_at' : updatedAt
+    'id': id,
+    'type': type,
+    'notifiable_type': notifiableType,
+    'notifiable_id': notifiableId,
+    'data': data?.toJson(),
+    'read_at': readAt,
+    'created_at': createdAt,
+    'updated_at': updatedAt,
+    'subject_id': subjectId,
   };
 }
 
@@ -78,12 +100,16 @@ class NotificationInner1Data {
   NotificationInner1Data.fromJson(Map<String, dynamic> json)
       : title = json['title'] as String?,
         message = json['message'] as String?,
-        data = (json['data'] as Map<String,dynamic>?) != null ? ActionData.fromJson(json['data'] as Map<String,dynamic>) : null;
+        data = (json['data'] as Map<String, dynamic>?) != null
+            ? ActionData.fromJson(json['data'] as Map<String, dynamic>)
+            : null {
+    debugPrint('NotificationInner1Data.fromJson: title=$title, message=$message');
+  }
 
   Map<String, dynamic> toJson() => {
-    'title' : title,
-    'message' : message,
-    'data' : data?.toJson()
+    'title': title,
+    'message': message,
+    'data': data?.toJson(),
   };
 }
 
@@ -96,6 +122,7 @@ class ActionData {
   final dynamic missionId;
   final dynamic visionId;
   final int? time;
+  final String? visionTitle;
 
   ActionData({
     this.action,
@@ -106,7 +133,7 @@ class ActionData {
     this.missionId,
     this.visionId,
     this.time,
-
+    this.visionTitle,
   });
 
   ActionData.fromJson(Map<String, dynamic> json)
@@ -117,16 +144,20 @@ class ActionData {
         laLevelId = json['la_level_id'],
         missionId = json['mission_id'],
         visionId = json['vision_id'],
-        time = json["quiz_time"];
+        time = json["quiz_time"],
+        visionTitle = json["vision_title"] as String? {
+    debugPrint('ActionData.fromJson: action=$action, laSubjectId=$laSubjectId, visionId=$visionId, visionTitle=$visionTitle');
+  }
 
   Map<String, dynamic> toJson() => {
-    'action' : action,
-    'action_id' : actionId,
-    'media_url' : mediaUrl,
-    'la_subject_id' : laSubjectId,
-    'mission_id' : missionId,
-    'la_level_id' : laLevelId,
-    'vision_id'   : visionId,
+    'action': action,
+    'action_id': actionId,
+    'media_url': mediaUrl,
+    'la_subject_id': laSubjectId,
+    'la_level_id': laLevelId,
+    'mission_id': missionId,
+    'vision_id': visionId,
     'quiz_time': time,
+    'vision_title': visionTitle,
   };
 }

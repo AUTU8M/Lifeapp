@@ -11,6 +11,10 @@ class VisionVideo {
   final bool isCompleted;
   final bool isSkipped;
   final bool isPending;
+  final String? levelId;
+  final VisionSubject? subject;
+
+
   VisionVideo({
     required this.id,
     required this.title,
@@ -22,7 +26,49 @@ class VisionVideo {
     required this.isCompleted,
     required this.isSkipped,
     required this.isPending,
+    this.levelId,
+    this.subject,
   });
+  factory VisionVideo.fromJson(Map<String, dynamic> json) {
+    String videoId = '';
+    String thumbnail = '';
+    final statusStr = (json['status']?.toString() ?? '').toLowerCase();
+
+    if (json.containsKey('youtubeUrl') && json['youtubeUrl'] != null) {
+      videoId = getVideoIdFromUrl(json['youtubeUrl'] ?? '') ?? '';
+      thumbnail = json.containsKey('thumbnailUrl') && json['thumbnailUrl'] != null
+          ? json['thumbnailUrl']
+          : videoId.isNotEmpty
+          ? getThumbnailUrl(videoId)
+          : 'https://via.placeholder.com/320x180?text=No+Thumbnail';
+    } else {
+      thumbnail = 'https://via.placeholder.com/320x180?text=No+Video+URL';
+    }
+    String? levelId;
+    if (json.containsKey('level') && json['level'] != null) {
+      final level = json['level'];
+      if (level is Map<String, dynamic> && level.containsKey('id')) {
+        levelId = level['id'].toString();
+      }
+    } else {
+      // fallback
+      levelId = json['levelId']?.toString() ?? json['level_id']?.toString();
+    }
+
+    return VisionVideo(
+      id: json['id']?.toString() ?? '',
+      title: json['title']?.toString() ?? 'Untitled Video',
+      description: json['description']?.toString() ?? '',
+      youtubeUrl: json['youtubeUrl']?.toString() ?? '',
+      thumbnailUrl: thumbnail,
+      status: json['status']?.toString() ?? 'start',
+      teacherAssigned: json['teacherAssigned'] == true,
+      isCompleted: statusStr == 'completed',
+      isSkipped: statusStr == 'skipped',
+      isPending: statusStr == 'pending',
+      levelId: levelId,
+    );
+  }
 
   // Extract YouTube video ID from a URL
   static String? getVideoIdFromUrl(String url) {
@@ -40,38 +86,6 @@ class VisionVideo {
     return 'https://img.youtube.com/vi/$videoId/$quality.jpg';
   }
 
-  factory VisionVideo.fromJson(Map<String, dynamic> json) {
-    // Extract YouTube video ID from URL if thumbnailUrl is not provided
-    String videoId = '';
-    String thumbnail = '';
-    var stat = json;
-    print('zzzzzz $stat');
-    if (json.containsKey('youtubeUrl') && json['youtubeUrl'] != null) {
-      videoId = getVideoIdFromUrl(json['youtubeUrl'] ?? '') ?? '';
-      
-      // Use thumbnailUrl from API if provided, otherwise generate from video ID
-      thumbnail = json.containsKey('thumbnailUrl') && json['thumbnailUrl'] != null
-          ? json['thumbnailUrl']
-          : videoId.isNotEmpty 
-              ? getThumbnailUrl(videoId)
-              : 'https://via.placeholder.com/320x180?text=No+Thumbnail';
-    } else {
-      thumbnail = 'https://via.placeholder.com/320x180?text=No+Video+URL';
-    }
-
-    return VisionVideo(
-        id: json['id']?.toString() ?? '',
-      title: json['title']?.toString() ?? 'Untitled Video',
-      description: json['description']?.toString() ?? '',
-      youtubeUrl: json['youtubeUrl']?.toString() ?? '',
-      thumbnailUrl: thumbnail,
-      status: json['status']?.toString() ?? 'Start',
-      teacherAssigned: json['teacherAssigned'] == true,
-      isCompleted: json['status']?.toString() == 'completed',
-      isSkipped :  json['status']?.toString() == 'skipped',
-      isPending :  json['status']?.toString() == 'pending',
-    );
-  }
 
   // Convert model to JSON for sending to API
   Map<String, dynamic> toJson() {
@@ -109,4 +123,22 @@ class VisionVideo {
       isSkipped: isSkipped,
     );
   }
+}
+class VisionSubject {
+  final String id;
+  final Map<String, dynamic> title;
+
+  VisionSubject({
+    required this.id,
+    required this.title,
+  });
+
+  factory VisionSubject.fromJson(Map<String, dynamic> json) {
+    return VisionSubject(
+      id: json['id'].toString(),
+      title: json['title'] ?? {},
+    );
+  }
+
+  String get name => title['en'] ?? 'Unknown';
 }

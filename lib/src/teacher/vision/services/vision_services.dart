@@ -204,7 +204,6 @@ class TeacherVisionAPIService {
           } else if (responseData['data'] is List) {
             visionsData = responseData['data'];
           }
-
           if (visionsData.isNotEmpty) {
             final videos = visionsData.map((item) {
               debugPrint('🎬 Processing video item: ${item.keys}');

@@ -12,7 +12,6 @@ import '../../../questions/presentations/quiz_review_page.dart';
 import '../../model/quiz_history_model.dart';
 import '../../provider/quiz_provider.dart';
 
-
 class MyQuizPage extends StatefulWidget {
   const MyQuizPage({Key? key}) : super(key: key);
 
@@ -140,15 +139,15 @@ class _MyQuizPageState extends State<MyQuizPage> {
           itemBuilder: (context, index) => Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: InkWell(
-              onTap: () {
-                push(
-                  context: context,
-                  page: QuizReviewPage(
-                    quizId: quizHistoryModel!.data!.data![index].id!.toString(),
-                    name: "Quiz",
-                  ),
-                );
-              },
+                onTap: () {
+                  push(
+                    context: context,
+                    page: QuizReviewPage(
+                      quizId: quizHistoryModel!.data!.data![index].id!.toString(),
+                      name: "quiz",
+                    ),
+                  );
+                },
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(25),

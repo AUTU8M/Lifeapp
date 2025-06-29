@@ -4,7 +4,6 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:lifelab3/src/common/helper/color_code.dart';
 import 'package:lifelab3/src/student/vision/presentations/vision_page.dart';
 import 'package:provider/provider.dart';
-
 import '../../../../common/helper/image_helper.dart';
 import '../../../../common/helper/string_helper.dart';
 import '../../../../common/widgets/common_navigator.dart';
@@ -22,17 +21,11 @@ class SubjectLevelDetailsWidget extends StatefulWidget {
   final String subjectId;
   final String navName;
   const SubjectLevelDetailsWidget({super.key, required this.provider, required this.index, required this.subjectId, required this.navName});
-
   @override
   State<SubjectLevelDetailsWidget> createState() => _SubjectLevelDetailsWidgetState();
 }
-
 class _SubjectLevelDetailsWidgetState extends State<SubjectLevelDetailsWidget> {
-
   void checkNavigation(String levelId) {
-
-
-    print("Widget : ${widget.navName}");
     Loader.show(
       context,
       progressIndicator: const CircularProgressIndicator(color: ColorCode.buttonColor,),
@@ -69,7 +62,6 @@ class _SubjectLevelDetailsWidgetState extends State<SubjectLevelDetailsWidget> {
       "la_subject_id": widget.subjectId,
       "la_level_id": levelId,
     };
-
     // Mission
     Provider.of<SubjectLevelProvider>(context, listen: false).getMission(data).whenComplete(() {
       Loader.hide();
@@ -83,12 +75,11 @@ class _SubjectLevelDetailsWidgetState extends State<SubjectLevelDetailsWidget> {
           ),
         );
       }
-
       if(widget.navName == 'Vision') {
         print('ccccc ${widget.navName}');
         push(
           context: context,
-          page: VisionPage(navName: widget.navName, subjectName: widget.subjectId , levelId:levelId )
+          page: VisionPage(navName: 'Vision', subjectId: widget.subjectId , levelId:levelId )
         );
       }
       // Jigyasa
@@ -102,7 +93,6 @@ class _SubjectLevelDetailsWidgetState extends State<SubjectLevelDetailsWidget> {
           );
         }
       });
-
       // Pragya
       Provider.of<SubjectLevelProvider>(context, listen: false).getPragyaMission(data2).whenComplete(() {
         if(widget.navName == StringHelper.pragyaSelf) {

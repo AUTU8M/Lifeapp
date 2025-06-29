@@ -11,7 +11,8 @@ class VideoPlayerPage extends StatefulWidget {
   final VoidCallback? onBack;
   final Function()? onVideoCompleted;
   final String navName;
-  final String subjectName;
+  final String subjectId;
+
 
   const VideoPlayerPage({
     super.key,
@@ -19,7 +20,7 @@ class VideoPlayerPage extends StatefulWidget {
     this.onBack,
     this.onVideoCompleted,
     required this.navName,
-    required this.subjectName,
+    required this.subjectId,
   });
 
   @override
@@ -198,35 +199,50 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
           // Bottom Controls
           if (_showOverlay)
             Positioned(
-              bottom: 100,
+              bottom: 90,
               left: 20,
               right: 20,
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      IconButton(
-                        icon: Icon(
-                            _isPlaying ? Icons.pause : Icons.play_arrow,
-                            color: Colors.white),
-                        onPressed: () {
-                          _isPlaying ? _controller.pause() : _controller.play();
-                        },
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              _isPlaying ? Icons.pause : Icons.play_arrow,
+                              color: Colors.white,
+                            ),
+                            onPressed: () {
+                              _isPlaying ? _controller.pause() : _controller.play();
+                            },
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              _isMuted ? Icons.volume_off : Icons.volume_up,
+                              color: Colors.white,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isMuted = !_isMuted;
+                                _isMuted ? _controller.mute() : _controller.unMute();
+                              });
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.fullscreen, color: Colors.white),
+                            onPressed: () => _controller.toggleFullScreenMode(),
+                          ),
+                        ],
                       ),
-                      IconButton(
-                        icon: Icon(
-                            _isMuted ? Icons.volume_off : Icons.volume_up,
-                            color: Colors.white),
-                        onPressed: () {
-                          setState(() {
-                            _isMuted = !_isMuted;
-                            _isMuted ? _controller.mute() : _controller.unMute();
-                          });
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.fullscreen, color: Colors.white),
-                        onPressed: () => _controller.toggleFullScreenMode(),
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: Text(
+                          "${_formatDuration(_currentPosition)} / ${_formatDuration(_videoDuration)}",
+                          style: const TextStyle(color: Colors.white, fontSize: 12),
+                        ),
                       ),
                     ],
                   ),
@@ -234,8 +250,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                     min: 0,
                     max: _videoDuration,
                     value: _currentPosition.clamp(0, _videoDuration),
-                    onChanged: (value) =>
-                        setState(() => _currentPosition = value),
+                    onChanged: (value) => setState(() => _currentPosition = value),
                     onChangeEnd: (value) =>
                         _controller.seekTo(Duration(seconds: value.toInt())),
                     activeColor: Colors.deepPurple,
@@ -243,12 +258,13 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                   ),
                 ],
               ),
+
             ),
 
           // "Play and Earn" Button
           if (!_isFullscreen && isPortrait)
             Positioned(
-              bottom: 30,
+              bottom: 40,
               left: 20,
               right: 20,
               child: ElevatedButton(
@@ -265,7 +281,7 @@ class _VideoPlayerPageState extends State<VideoPlayerPage> {
                           videoTitle: widget.video.title,
                           visionId: widget.video.id,
                           navName: widget.navName,
-                          subjectName: widget.subjectName,
+                          subjectId: widget.subjectId,
                           onReplayVideo: () {
                             if (mounted) {
                               _controller.play();

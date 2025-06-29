@@ -36,6 +36,8 @@ class VisionProvider with ChangeNotifier {
   'pending': false,
   'skipped': false,
   'teachersAssigned': false,
+    'submitted':false,
+    'rejected':false,
   };
 
   Map<String, dynamic>? get currentQuestions => _currentQuestions;
@@ -72,11 +74,17 @@ class VisionProvider with ChangeNotifier {
 
     // OR logic: include videos that match any of the selected filters
     filtered = filtered.where((video) {
-      return (activeKeys.contains('completed') && video.isCompleted) ||
-          (activeKeys.contains('pending') && video.isPending) ||
-          (activeKeys.contains('skipped') && video.isSkipped) ||
-          (activeKeys.contains('teachersAssigned') && video.teacherAssigned);
+      final status = video.status.toLowerCase();
+
+      return
+        (activeKeys.contains('completed') && status == 'completed') ||
+            (activeKeys.contains('pending') && status == 'pending') ||
+            (activeKeys.contains('skipped') && status == 'skipped') ||
+            (activeKeys.contains('submitted') && status == 'submitted') ||
+            (activeKeys.contains('rejected') && status == 'rejected') ||
+            (activeKeys.contains('teachersAssigned') && video.teacherAssigned);
     }).toList();
+
 
     return filtered;
   }
@@ -119,6 +127,17 @@ class VisionProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+  bool isCurrentLevelCompleted() {
+    if (_currentLevelId == null || _currentLevelId!.isEmpty) return false;
+
+    final levelVideos = _videos.where((v) => v.levelId.toString() == _currentLevelId).toList();
+
+    if (levelVideos.isEmpty) return false;
+
+    return levelVideos.every((v) => v.isCompleted);
+  }
+
+  String? get currentLevel => _currentLevelId;
 
   Future<void> refreshVideos() async {
     await fetchVideos();

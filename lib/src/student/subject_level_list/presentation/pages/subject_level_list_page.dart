@@ -9,11 +9,10 @@ import '../widgets/subject_level_details_widget.dart';
 
 class SubjectLevelListPage extends StatefulWidget {
 
-  final String subjectName;
   final String subjectId;
   final String navname;
 
-  const SubjectLevelListPage({super.key, required this.subjectName, required this.subjectId, required this.navname});
+  const SubjectLevelListPage({super.key, required this.subjectId, required this.navname});
   @override
   State<SubjectLevelListPage> createState() => _SubjectLevelListPageState();
 }
@@ -34,7 +33,7 @@ class _SubjectLevelListPageState extends State<SubjectLevelListPage> {
     return Scaffold(
       appBar: commonAppBar(
         context: context,
-        name: "${widget.subjectName} ${StringHelper.levels}",
+        name: " ${StringHelper.levels}",
       ),
       body: provider.levels != null ? ListView.builder(
         shrinkWrap: true,

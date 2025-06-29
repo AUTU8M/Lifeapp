@@ -21,6 +21,8 @@ class _FilterPageState extends State<FilterPage> {
   bool startFilter = false;
   bool pendingFilter = false;
   bool completedFilter = false;
+  bool submittedFilter = false;
+  bool rejectedFilter = false;
 
   @override
   void initState() {
@@ -30,8 +32,9 @@ class _FilterPageState extends State<FilterPage> {
     startFilter = widget.initialFilters['skipped'] ?? false;
     pendingFilter = widget.initialFilters['pending'] ?? false;
     completedFilter = widget.initialFilters['completed'] ?? false;
+    submittedFilter = widget.initialFilters['submitted'] ?? false; // NEW
+    rejectedFilter = widget.initialFilters['rejected'] ?? false;   // NEW
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -98,12 +101,24 @@ class _FilterPageState extends State<FilterPage> {
                     completedFilter = value;
                   });
                 }),
+                const Divider(height: 1),
+                _buildFilterOption('Submitted', submittedFilter, (value) {
+                  setState(() {
+                    submittedFilter = value;
+                  });
+                }),
+                const Divider(height: 1),
+                _buildFilterOption('Rejected', rejectedFilter, (value) {
+                  setState(() {
+                    rejectedFilter = value;
+                  });
+                }),
               ],
             ),
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Filter buttons
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -114,7 +129,7 @@ class _FilterPageState extends State<FilterPage> {
                   child: ElevatedButton(
                     onPressed: _resetFilters,
                     style: ElevatedButton.styleFrom(
-                      foregroundColor: Colors.blue, 
+                      foregroundColor: Colors.blue,
                       backgroundColor: Colors.white,
                       side: BorderSide(color: Colors.blue.shade300),
                       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -128,7 +143,7 @@ class _FilterPageState extends State<FilterPage> {
                   child: ElevatedButton(
                     onPressed: _applyFilters,
                     style: ElevatedButton.styleFrom(
-                      foregroundColor: Colors.white, 
+                      foregroundColor: Colors.white,
                       backgroundColor: Colors.blue.shade500,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
@@ -138,7 +153,7 @@ class _FilterPageState extends State<FilterPage> {
               ],
             ),
           ),
-                
+
         ],
       ),
     );
@@ -174,8 +189,11 @@ class _FilterPageState extends State<FilterPage> {
       startFilter = false;
       pendingFilter = false;
       completedFilter = false;
+      submittedFilter = false;
+      rejectedFilter = false;
     });
   }
+
 
   void _applyFilters() {
     // Create a map of the current filter states
@@ -185,11 +203,13 @@ class _FilterPageState extends State<FilterPage> {
       'skipped': startFilter,
       'pending': pendingFilter,
       'completed': completedFilter,
+      'submitted': submittedFilter,
+      'rejected': rejectedFilter,
     };
-    
+
     // Pass filters back to parent
     widget.onApplyFilters(filters);
-    
+
     // Close the filter page
     Navigator.of(context).pop(filters);
   }

@@ -5,7 +5,6 @@ import 'package:lifelab3/src/common/widgets/common_navigator.dart';
 import 'package:lifelab3/src/student/quiz/presentations/pages/quiz_time_page.dart';
 import 'package:lifelab3/src/student/quiz/services/quiz_services.dart';
 import 'package:lottie/lottie.dart';
-
 import '../../../../common/helper/color_code.dart';
 
 class SubjectQuizPage extends StatefulWidget {

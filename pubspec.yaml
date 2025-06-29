@@ -45,7 +45,7 @@ dependencies:
   image_cropper: ^9.1.0
   share_plus: 7.2.1
   persistent_bottom_nav_bar: ^5.0.2
-
+  smooth_page_indicator: ^1.2.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

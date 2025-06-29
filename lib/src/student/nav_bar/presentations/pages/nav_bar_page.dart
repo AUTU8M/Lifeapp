@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:lifelab3/src/common/helper/image_helper.dart';
 import 'package:lifelab3/src/common/helper/string_helper.dart';
 import 'package:persistent_bottom_nav_bar/persistent_tab_view.dart';
+import 'package:lifelab3/src/student/shop/presentations/shop_page.dart';
 
 import '../../../connect/presentations/pages/connect_page.dart';
 import '../../../home/presentations/pages/home_page.dart';
 import '../../../notification/presentations/notification_page.dart';
-import '../../../shop/presentations/shop_page.dart';
 import '../../../tracker/presentations/pages/tracker_page.dart';
 import '../widgets/nav_icon_widget.dart';
 
@@ -42,12 +42,12 @@ class _NavBarPageState extends State<NavBarPage> {
       child: PersistentTabView(
         context,
         controller: _controller,
-        screens: const [
-          HomePage(),
-          TrackerPage(),
-          ConnectPage(),
-          ShopPage(),
-          NotificationPage(),
+        screens: [
+          const HomePage(),
+          const TrackerPage(),
+          const ConnectPage(),
+          const ShopPage(),
+          const NotificationPage(),
         ],
         navBarStyle: NavBarStyle.style8,
         items: [
