@@ -37,6 +37,7 @@ dependencies:
   new_version_plus: ^0.0.9
   shimmer:
   upgrader: ^9.0.0
+  json_stream: ^1.0.1
   # image_gallery_saver: ^2.0.3
   intl: ^0.20.2
   photo_view: ^0.15.0
@@ -46,6 +47,8 @@ dependencies:
   share_plus: 7.2.1
   persistent_bottom_nav_bar: ^5.0.2
   smooth_page_indicator: ^1.2.1
+  mixpanel_flutter: ^2.4.4
+  sms_autofill: ^2.3.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

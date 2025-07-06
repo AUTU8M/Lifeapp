@@ -440,7 +440,7 @@ class _StudentAssignPageState extends State<StudentAssignPage> {
                               children: [
                                 CircularProgressIndicator(),
                                 SizedBox(height: 16),
-                                Text('Loading students...'),
+                                Text('Assigning students...'),
                               ],
                             ),
                           )

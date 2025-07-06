@@ -49,8 +49,9 @@ class AssignmentSuccessScreen extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.popUntil(context, (route) => route.isFirst);
-                    },
+                      Navigator.pop(context); // close current screen
+                      Navigator.pop(context);   // close current screen
+                      Navigator.pop(context);                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
                       foregroundColor: Colors.white,

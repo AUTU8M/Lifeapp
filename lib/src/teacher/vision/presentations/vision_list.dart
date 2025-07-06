@@ -171,6 +171,7 @@ class _VisionPageState extends State<VisionPage>
   Widget build(BuildContext context) {
     return Consumer <VisionProvider>(
       builder: (context, provider, child) {
+
         // Get dynamic filter options from provider
         final availableSubjects = provider.getAvailableSubjects();
         final availableLevels = provider.getAvailableLevels();
@@ -261,14 +262,17 @@ class _VisionPageState extends State<VisionPage>
                         const SizedBox(width: 8),
                         Expanded(
                           child: Container(
-                            height: 36,
+                            height: 36, // Slightly increased from 36 to avoid clipping
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(color: Colors.grey[300]!),
                             ),
+                            alignment: Alignment.center, // Ensures child centers vertically
                             child: TextField(
                               controller: _searchController,
+                              textAlignVertical: TextAlignVertical.center, // ✅ Forces vertical centering
+                              style: const TextStyle(fontSize: 14),
                               decoration: InputDecoration(
                                 hintText: 'Search...',
                                 hintStyle: TextStyle(
@@ -281,18 +285,19 @@ class _VisionPageState extends State<VisionPage>
                                   size: 20,
                                 ),
                                 border: InputBorder.none,
+                                isDense: true, // ✅ Reduces internal spacing
                                 contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
+                                  horizontal: 12, // Horizontal padding only
+                                  vertical: 0,     // Let textAlignVertical handle vertical alignment
                                 ),
                               ),
-                              style: const TextStyle(fontSize: 14),
                               onChanged: (value) {
                                 provider.setSearchQuery(value);
                               },
                             ),
                           ),
                         ),
+
                       ],
                     ),
                   ),
@@ -301,15 +306,31 @@ class _VisionPageState extends State<VisionPage>
               ),
             ),
           ),
-          body: TabBarView(
-            controller: _tabController,
+          body: Stack(
             children: [
-              provider.isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _buildVideoList(provider.filteredNonAssignedVideos, false),
-              provider.isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _buildVideoList(provider.filteredAssignedVideos, true),
+              TabBarView(
+                controller: _tabController,
+                children: [
+                  // All Videos Tab
+                  _buildVideoList(provider.filteredNonAssignedVideos, false),
+
+                  // Assigned Videos Tab
+                  _buildVideoList(provider.filteredAssignedVideos, true),
+                ],
+              ),
+
+              // Add overlay loader only when initially loading
+              if (provider.isLoading && provider.filteredNonAssignedVideos.isEmpty && provider.filteredAssignedVideos.isEmpty)
+                Positioned.fill(
+                  child: Container(
+                    color: Colors.white.withOpacity(0.8),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)),
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
         );
@@ -318,7 +339,11 @@ class _VisionPageState extends State<VisionPage>
   }
 
   Widget _buildVideoList(List<TeacherVisionVideo> videos, bool isAssignedTab) {
-    if (videos.isEmpty) {
+    final provider = Provider.of<VisionProvider>(context);
+    final hasMore = isAssignedTab ? provider.hasMoreAssignedVideos : provider.hasMoreAllVideos;
+    final isLoadingMore = provider.isLoadingMore;
+
+    if (videos.isEmpty && !provider.isLoading) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -337,42 +362,63 @@ class _VisionPageState extends State<VisionPage>
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: () =>
-          Provider.of<VisionProvider>(context, listen: false).refreshVideos(),
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: videos.length,
-        itemBuilder: (context, index) {
-          final video = videos[index];
-          final videoId =
-              YoutubePlayer.convertUrlToId(video.youtubeUrl) ?? 'dQw4w9WgXcQ';
+    return NotificationListener<ScrollNotification>(
+      onNotification: (scrollNotification) {
+        if (scrollNotification.metrics.pixels ==
+            scrollNotification.metrics.maxScrollExtent) {
+          if (hasMore && !isLoadingMore) {
+            provider.loadMoreVideos();
+          }
+        }
+        return false;
+      },
+      child: RefreshIndicator(
+        onRefresh: () => provider.refreshVideos(),
+        child: ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: videos.length + (hasMore ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index >= videos.length) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                child: Center(
+                  child: isLoadingMore
+                      ? CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6366F1)),
+                  )
+                      : const Text('\u200B'),
+                ),
+              );
+            }
 
-          return GestureDetector(
-            onTap: () => !isAssignedTab ? _navigateToVideoPlayer(video) : null,
-            child: Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+            final video = videos[index];
+            final videoId = YoutubePlayer.convertUrlToId(video.youtubeUrl) ?? 'dQw4w9WgXcQ';
+
+            return GestureDetector(
+              onTap: () => !isAssignedTab ? _navigateToVideoPlayer(video) : null,
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: isAssignedTab
+                    ? _buildAssignedVideoCard(video, videoId)
+                    : _buildRegularVideoCard(video, videoId),
               ),
-              child: isAssignedTab
-                  ? _buildAssignedVideoCard(video, videoId)
-                  : _buildRegularVideoCard(video, videoId),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
-
   Widget _buildRegularVideoCard(TeacherVisionVideo video, String videoId) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

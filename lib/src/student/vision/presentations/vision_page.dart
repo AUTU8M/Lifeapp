@@ -29,7 +29,7 @@ class _VisionPageState extends State<VisionPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final provider = Provider.of<VisionProvider>(context, listen: false);
-      print("akash ${widget.subjectId}");
+      print("subject ${widget.subjectId}");
 
       print('Loaded videos: ${provider.videos.length}');
       print('Current Level ID: ${widget.levelId}');
@@ -148,15 +148,17 @@ class _VisionPageState extends State<VisionPage> {
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'completed':
-        return Colors.green;
+        return Colors.black;
       case 'pending':
-        return Colors.red;
+        return Colors.black;
       case 'submitted':
-        return Colors.blue;
+        return Colors.black;
       case 'rejected':
-        return Colors.orange; // you can use red or orange based on UI preference
+        return Colors.black; // you can use red or orange based on UI preference
+      case 'skipped':
+        return Colors.black;
       default:
-        return Colors.grey;
+        return Colors.black;
     }
   }
 
@@ -176,7 +178,7 @@ class _VisionPageState extends State<VisionPage> {
           Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.grey.shade300),
+              border: Border.all(color: Colors.black12),
             ),
             child: IconButton(
               icon: const Icon(Icons.filter_alt_outlined),
@@ -326,7 +328,7 @@ class _VisionPageState extends State<VisionPage> {
                           horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: const Color.fromARGB(255, 255, 255, 255)
-                            .withOpacity(0.8),
+                            .withOpacity(0.9),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(

@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -23,24 +22,19 @@ import '../../questions/models/quiz_review_model.dart';
 import '../../subject_level_list/provider/subject_level_provider.dart';
 import '../model/notification_model.dart';
 import 'package:lottie/lottie.dart';
-
 class NotificationPage extends StatefulWidget {
   const NotificationPage({Key? key}) : super(key: key);
-
   @override
   State<NotificationPage> createState() => _NotificationPageState();
 }
-
 class _NotificationPageState extends State<NotificationPage> {
   NotificationModel? notificationModel;
   bool isLoading = true;
-
   @override
   void initState() {
     super.initState();
     getNotificationData();
   }
-
   void getNotificationData() async {
     await NotificationServices().getNotification().then((value) async {
       debugPrint('Notification Response: $value');
@@ -49,16 +43,68 @@ class _NotificationPageState extends State<NotificationPage> {
       Provider.of<DashboardProvider>(context, listen: false).getDashboardData();
       setState(() {});
     });
-
     setState(() {
       isLoading = false;
     });
   }
+  void showVisionStatusDialog(BuildContext context, String status, NotificationData notification) async {
+    debugPrint("🟢 showVisionStatusDialog called with status: $status");
 
-  void showVisionStatusDialog(BuildContext context, String status) {
     final bool isApproved = status.toLowerCase() == 'approved';
     final Color color = isApproved ? Colors.green.shade600 : Colors.red.shade600;
     final IconData icon = isApproved ? Icons.check_circle : Icons.cancel;
+
+    final visionProvider = Provider.of<VisionProvider>(context, listen: false);
+    VisionVideo? video;
+
+    // Get IDs from notification
+    final rawVisionId = notification.data?.data?.visionId ?? notification.data?.data?.actionId;
+    final rawSubjectId = notification.data?.data?.laSubjectId;
+
+    debugPrint('🔍 Raw Vision ID: $rawVisionId');
+    debugPrint('🔍 Raw Subject ID: $rawSubjectId');
+
+    final visionId = rawVisionId?.toString();
+    final subjectId = rawSubjectId?.toString();
+
+    if (visionId == null || visionId.isEmpty) {
+      debugPrint('❌ Vision ID is missing.');
+      Fluttertoast.showToast(msg: "Vision ID is missing");
+      return;
+    }
+
+    // Try fetching the video
+    if (subjectId == null || subjectId.isEmpty) {
+      debugPrint('⚠️ Subject ID is empty. Trying all levels...');
+      for (int level = 1; level <= 4; level++) {
+        debugPrint('🔄 Trying level $level...');
+        await visionProvider.initWithSubject('', level.toString());
+        video = visionProvider.getVideoById(visionId);
+        if (video != null) {
+          debugPrint('✅ Video found at level $level: ${video.title}');
+          break;
+        }
+      }
+    } else {
+      debugPrint('🔄 Trying levels with subjectId: $subjectId');
+      for (int level = 1; level <= 4; level++) {
+        debugPrint('🔄 Fetching videos for subjectId: $subjectId, level: $level');
+        await visionProvider.initWithSubject(subjectId, level.toString());
+        video = visionProvider.getVideoById(visionId);
+        if (video != null) {
+          debugPrint('✅ Video found at level $level: ${video.title}');
+          break;
+        }
+      }
+    }
+    final String title = video?.title ?? 'Vision';
+    debugPrint('📌 Final video title to show in dialog: $title');
+    debugPrint("🪙 Coin points: ${video?.visionTextImagePoints}");
+
+    if (!context.mounted) {
+      debugPrint('🚫 Context is not mounted. Aborting.');
+      return;
+    }
 
     showDialog(
       context: context,
@@ -70,8 +116,8 @@ class _NotificationPageState extends State<NotificationPage> {
           ),
           backgroundColor: Colors.white,
           child: Container(
-            padding: const EdgeInsets.all(24),
-            width: MediaQuery.of(context).size.width * 0.8,
+            padding: const EdgeInsets.all(22),
+            width: MediaQuery.of(context).size.width * 0.2,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -82,40 +128,138 @@ class _NotificationPageState extends State<NotificationPage> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Vision ${isApproved ? "Approved" : "Rejected"}',
+                  '$title ${isApproved}',
+                  textAlign: TextAlign.center,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
                     color: color,
                   ),
                 ),
                 const SizedBox(height: 12),
-                Text(
-                  isApproved
-                      ? 'Your vision has been successfully approved!'
-                      : 'Unfortunately, your vision was rejected.',
+                isApproved
+                    ? RichText(
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 16),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: color,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    child: Text(
-                      "OK",
-                      style: TextStyle(fontSize: 16, color: Colors.white),
-                    ),
+                  text: TextSpan(
+                    style: const TextStyle(fontSize: 16, color: Colors.black87),
+                    children: [
+                      const TextSpan(text: 'Brilliant work—your vision has been approved and '),
+                      TextSpan(
+                        text: '${video!.visionTextImagePoints} coins',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+                      const TextSpan(
+                          text:
+                          ' have been added to your treasure chest. On to the next adventure!'),
+                    ],
                   ),
                 )
+                    :RichText(
+                  textAlign: TextAlign.center,
+                  text: const TextSpan(
+                    style: TextStyle(fontSize: 16, color: Colors.black87),
+                    children: [
+                      TextSpan(
+                          text:
+                          'No worries—every pro started right where you are! Tap Redo to give it another go and earn '),
+                      TextSpan(
+                        text: '+25 coins',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+                      TextSpan(text: ' when you succeed.'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // 👇 Coin Earned section (only for approved)
+                if (isApproved && (video?.visionTextImagePoints ?? 0) > 0) ...[
+                  const SizedBox(height: 12),
+                ],
+                const SizedBox(height: 12),
+                if (video != null) ...[
+                  Text(
+                    "Subject: ${video.subjectName ?? ''}",
+                    style: const TextStyle(fontSize: 14, color: Colors.black54),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Level: ${video.levelId ?? 'N/A'}",
+                    style: const TextStyle(fontSize: 14, color: Colors.black54),
+                  ),
+                ],
+                const SizedBox(height: 15),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: color,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        if (video != null) {
+                          debugPrint('🚀 Navigating to VideoPlayerPage with video ID: ${video.id}');
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ChangeNotifierProvider.value(
+                                value: visionProvider,
+                                child: VideoPlayerPage(
+                                  video: video!,
+                                  navName: "Notification",
+                                  subjectId: subjectId ?? '',
+                                  onVideoCompleted: () {},
+                                ),
+                              ),
+                            ),
+                          );
+                        } else {
+                          Fluttertoast.showToast(msg: "Video not found");
+                        }
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                        child: Text(
+                          isApproved ? "Go to Vision" : "Redo",
+                          style: const TextStyle(fontSize: 13, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade400,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                        push(
+                          context: context,
+                          page: const NotificationPage(),
+                        );
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                        child: Text(
+                          "Done",
+                          style: TextStyle(fontSize: 13, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -123,8 +267,6 @@ class _NotificationPageState extends State<NotificationPage> {
       },
     );
   }
-
-
   Widget _buildButton(String text, VoidCallback onPressed) {
     return GestureDetector(
       onTap: onPressed,
@@ -216,107 +358,102 @@ class _NotificationPageState extends State<NotificationPage> {
     }
   }
 
-  void _handleVisionVideo(NotificationData notification) async {
-    try {
-      final rawVisionId = notification.data?.data?.visionId;
-      final rawSubjectId = notification.data?.data?.laSubjectId;
-      final rawActionId = notification.data?.data?.actionId;
+    void _handleVisionVideo(NotificationData notification) async {
+      try {
+        final rawVisionId = notification.data?.data?.visionId;
+        final rawSubjectId = notification.data?.data?.laSubjectId;
+        final rawActionId = notification.data?.data?.actionId;
 
-      debugPrint('🔍 Raw visionId: $rawVisionId');
-      debugPrint('🔍 Raw subjectId: $rawSubjectId');
-      debugPrint('🔍 Raw actionId: $rawActionId');
+        debugPrint('🔍 Raw visionId: $rawVisionId');
+        debugPrint('🔍 Raw subjectId: $rawSubjectId');
+        debugPrint('🔍 Raw actionId: $rawActionId');
 
-      final visionId = (rawVisionId is String && rawVisionId.trim().isNotEmpty)
-          ? rawVisionId.trim()
-          : (rawVisionId?.toString().trim().isNotEmpty == true
-          ? rawVisionId.toString().trim()
-          : (rawActionId != null ? rawActionId.toString() : null));
+        final visionId = (rawVisionId is String && rawVisionId.trim().isNotEmpty)
+            ? rawVisionId.trim()
+            : (rawVisionId?.toString().trim().isNotEmpty == true
+            ? rawVisionId.toString().trim()
+            : (rawActionId != null ? rawActionId.toString() : null));
 
-      final subjectId = (rawSubjectId is String && rawSubjectId.trim().isNotEmpty)
-          ? rawSubjectId.trim()
-          : (rawSubjectId?.toString().trim().isNotEmpty == true
-          ? rawSubjectId.toString().trim()
-          : null);
+        final subjectId = (rawSubjectId is String && rawSubjectId.trim().isNotEmpty)
+            ? rawSubjectId.trim()
+            : (rawSubjectId?.toString().trim().isNotEmpty == true
+            ? rawSubjectId.toString().trim()
+            : null);
 
-      debugPrint('✅ Parsed visionId: $visionId');
-      debugPrint('✅ Parsed subjectId: $subjectId');
+        debugPrint('✅ Parsed visionId: $visionId');
+        debugPrint('✅ Parsed subjectId: $subjectId');
 
-      if (visionId == null || visionId.isEmpty) {
-        Fluttertoast.showToast(msg: "Vision ID is missing");
-        debugPrint('❌ Vision ID missing, aborting.');
-        return;
-      }
+        if (visionId == null || visionId.isEmpty) {
+          Fluttertoast.showToast(msg: "Vision ID is missing");
+          debugPrint('❌ Vision ID missing, aborting.');
+          return;
+        }
 
-      final visionProvider = Provider.of<VisionProvider>(context, listen: false);
-      VisionVideo? video;
+        final visionProvider = Provider.of<VisionProvider>(context, listen: false);
+        VisionVideo? video;
 
-      if (subjectId == null) {
-        debugPrint('⚠️ Subject ID is null, fetching videos without subject filtering');
-        for (int level = 1; level <= 4; level++) {
-          await visionProvider.initWithSubject('', level.toString());
-          video = visionProvider.getVideoById(visionId);
-          if (video != null) {
-            debugPrint('🎯 Video found at level $level: ${video.title}');
-            break;
+        if (subjectId == null) {
+          debugPrint('⚠️ Subject ID is null, fetching videos without subject filtering');
+          for (int level = 1; level <= 4; level++) {
+            await visionProvider.initWithSubject('', level.toString());
+            video = visionProvider.getVideoById(visionId);
+            if (video != null) {
+              debugPrint('🎯 Video found at level $level: ${video.title}');
+              break;
+            }
+          }
+        } else {
+          for (int level = 1; level <= 4; level++) {
+            debugPrint('🔄 Fetching videos for subjectId: $subjectId, level: $level');
+            await visionProvider.initWithSubject(subjectId, level.toString());
+
+            video = visionProvider.getVideoById(visionId);
+            if (video != null) {
+              debugPrint('🎯 Video found at level $level: ${video.title}');
+              break;
+            }
           }
         }
-      } else {
-        for (int level = 1; level <= 4; level++) {
-          debugPrint('🔄 Fetching videos for subjectId: $subjectId, level: $level');
-          await visionProvider.initWithSubject(subjectId, level.toString());
 
-          video = visionProvider.getVideoById(visionId);
-          if (video != null) {
-            debugPrint('🎯 Video found at level $level: ${video.title}');
-            break;
-          }
+        if (video == null) {
+          Fluttertoast.showToast(msg: "Video not found for vision");
+          debugPrint('❌ Video not found for visionId: $visionId');
+          return;
         }
-      }
-
-      if (video == null) {
-        Fluttertoast.showToast(msg: "Video not found for vision");
-        debugPrint('❌ Video not found for visionId: $visionId');
-        return;
-      }
-
-      if (!mounted) return;
-
-      debugPrint('🚀 Navigating to VideoPlayerPage with video ID: ${video.id}');
-
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ChangeNotifierProvider.value(
-            value: visionProvider,
-            child: VideoPlayerPage(
-              video: video!,
-              navName: "Notification",
-              subjectId: rawSubjectId?.toString() ?? '',
-              onVideoCompleted: () {},
+        if (!mounted) return;
+        Navigator.of(context, rootNavigator: true).push(
+          MaterialPageRoute(
+            builder: (_) => ChangeNotifierProvider.value(
+              value: visionProvider,
+              child: VideoPlayerPage(
+                video: video!,
+                navName: "Notification",
+                subjectId: rawSubjectId?.toString() ?? '',
+                onVideoCompleted: () {},
+              ),
             ),
           ),
-        ),
-      );
-    } catch (e, stacktrace) {
-      debugPrint('❌ Error opening video: $e');
-      debugPrint('$stacktrace');
-      Fluttertoast.showToast(msg: "Error opening video");
+        );
+      } catch (e, stacktrace) {
+        debugPrint('❌ Error opening video: $e');
+        debugPrint('$stacktrace');
+        Fluttertoast.showToast(msg: "Error opening video");
+      }
     }
-  }
 
   Widget _getActionButton(NotificationData notification, int index) {
     final message = notification.data!.message ?? '';
     final action = notification.data!.data!.action?.toString() ?? '';
 
     if (message.contains('vision has been approved')) {
-      return _buildButton('OK', () {
-        showVisionStatusDialog(context, 'approved');
+      return _buildButton('View', () {
+        showVisionStatusDialog(context, 'approved', notification);
       });
     } else if (message.contains('vision has been rejected')) {
-      return _buildButton('OK', () {
-        showVisionStatusDialog(context, 'rejected');
+      return _buildButton('View', () {
+        showVisionStatusDialog(context, 'rejected', notification);
       });
-    } else if (message.contains('mission have been rejected')) {
+  } else if (message.contains('mission have been rejected')) {
       return _buildButton('View', _handleMissionRejected);
     } else if (message.contains('mission has been approved')) {
       return _buildButton('View', () {
@@ -357,7 +494,6 @@ class _NotificationPageState extends State<NotificationPage> {
     itemBuilder: (context, index) {
       final notification = notificationModel!.data![index];
       final message = notification.data!.message ?? '';
-
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -431,7 +567,6 @@ class _NotificationPageState extends State<NotificationPage> {
     },
     separatorBuilder: (context, index) => const SizedBox(height: 8),
   );
-
   Widget _emptyData() => SizedBox(
     height: MediaQuery.of(context).size.height,
     child: const Center(

@@ -15,6 +15,7 @@ import 'package:lifelab3/src/welcome/presentation/page/welcome_page.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../common/utils/mixpanel_service.dart';
 import '../../../profile/services/profile_services.dart';
 import '../../../subject_list/presentation/page/subject_list_page.dart';
 
@@ -102,6 +103,9 @@ class DrawerView extends StatelessWidget {
                 Loader.hide();
 
                 if (response.statusCode == 200) {
+                  MixpanelService.track("User Logged Out", properties: {
+                    "timestamp": DateTime.now().toIso8601String(),
+                  });
                   StorageUtil.clearData();
                   Fluttertoast.showToast(msg: "Logout Successfully");
                   push(

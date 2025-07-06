@@ -4,11 +4,11 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:lifelab3/src/common/helper/image_helper.dart';
 import 'package:lifelab3/src/common/widgets/custom_text_field.dart';
 import 'package:provider/provider.dart';
-
 import '../../../../common/helper/string_helper.dart';
 import '../../../../common/widgets/custom_button.dart';
 import '../../provider/student_login_provider.dart';
 import '../widgets/otp_bottom_sheet.dart';
+import 'package:lifelab3/src/common/utils/mixpanel_service.dart';
 
 class StudentLoginPage extends StatelessWidget {
   const StudentLoginPage({super.key});
@@ -75,14 +75,22 @@ class StudentLoginPage extends StatelessWidget {
                   name: StringHelper.submit,
                   height: 45,
                   onTap: () {
-                    if(provider.contactController.text.length == 10) {
+                    if (provider.contactController.text.length == 10) {
                       FocusScope.of(context).unfocus();
+
+                      // 🔹 Mixpanel: Track Login Attempt
+                      MixpanelService.track("Login Attempt", properties: {
+                        "phone": provider.contactController.text,
+                        "timestamp": DateTime.now().toIso8601String(),
+                      });
+
                       enterPinSheet(context, provider);
                       provider.sendOtp(context);
                     } else {
                       Fluttertoast.showToast(msg: StringHelper.invalidData);
                     }
                   },
+
                 ),
               ),
 

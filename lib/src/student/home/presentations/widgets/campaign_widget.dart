@@ -3,16 +3,12 @@ import 'package:lifelab3/src/student/home/models/campaign_model.dart';
 import 'package:provider/provider.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import '../../../mission/presentations/pages/mission_page.dart';
-import '../../../quiz/presentations/pages/quiz_time_page.dart';
 import '../../../subject_level_list/presentation/pages/quiz_topic_list_page.dart';
 import '../../../subject_level_list/provider/subject_level_provider.dart';
 import '../../provider/dashboard_provider.dart';
 import '../../../vision/models/vision_video.dart';
 import '../../../vision/presentations/video_player.dart';
 import '../../../vision/providers/vision_provider.dart';
-import '../../../questions/models/quiz_review_model.dart';
-import '../../../questions/services/que_services.dart';
 import 'package:lifelab3/src/student/mission/presentations/pages/submit_mission_page.dart';
 import 'package:lifelab3/src/student/subject_level_list/models/mission_list_model.dart';
 import 'dart:async';
@@ -49,8 +45,6 @@ class _CampaignSliderWidgetState extends State<CampaignSliderWidget> {
       return;
     }
     debugPrint("🟢 Proceeding with campaign gameId=$gameId, refId=$referenceId");
-
-
     if (gameId == 7) {
       // Vision campaign
       debugPrint("Campaign type: Vision");
@@ -80,8 +74,7 @@ class _CampaignSliderWidgetState extends State<CampaignSliderWidget> {
         Fluttertoast.showToast(msg: "Video not found for this campaign");
         return;
       }
-      Navigator.push(
-        context,
+      Navigator.of(context, rootNavigator: true).push(
         MaterialPageRoute(
           builder: (_) => ChangeNotifierProvider.value(
             value: visionProvider,
@@ -220,7 +213,7 @@ class _CampaignSliderWidgetState extends State<CampaignSliderWidget> {
     return Column(
       children: [
         SizedBox(
-          height: 200,
+          height: 220,
           child: PageView.builder(
             controller: _pageController,
             itemCount: campaigns.length,
@@ -238,7 +231,7 @@ class _CampaignSliderWidgetState extends State<CampaignSliderWidget> {
                           ? Image.network(
                         campaign.imageUrl,
                         width: double.infinity,
-                        height: 200,
+                        height: 220,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
                           return _buildFallbackImage();
@@ -247,7 +240,7 @@ class _CampaignSliderWidgetState extends State<CampaignSliderWidget> {
                           : _buildFallbackImage(),
                     ),
                     Container(
-                      height: 200,
+                      height: 220,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(15),
                         gradient: LinearGradient(
@@ -262,9 +255,9 @@ class _CampaignSliderWidgetState extends State<CampaignSliderWidget> {
                       right: 12,
                       bottom: 12,
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          Flexible(
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
@@ -273,18 +266,23 @@ class _CampaignSliderWidgetState extends State<CampaignSliderWidget> {
                                   campaign.title,
                                   style: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 20,
+                                    fontSize: 22,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
                                   campaign.description,
-                                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                  ),
                                 ),
+
                               ],
                             ),
                           ),
+                          const SizedBox(width: 10),
                           ElevatedButton(
                             onPressed: () => _handleCampaignTap(campaign),
                             style: ElevatedButton.styleFrom(
@@ -293,24 +291,28 @@ class _CampaignSliderWidgetState extends State<CampaignSliderWidget> {
                               padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 4),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(22),
-                                side: BorderSide(
+                                side: const BorderSide(
                                   color: Colors.blue,
-                                  width: 1.5,
+                                  width: 1,
                                 ),
                               ),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(campaign.buttonName.isNotEmpty ? campaign.buttonName : "Start"),
-                                const SizedBox(width: 4),
+                                Text(
+                                  campaign.buttonName.isNotEmpty ? campaign.buttonName : "Start",
+                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                                ),
+                                const SizedBox(width: 2),
                                 const Icon(Icons.arrow_forward, size: 14),
                               ],
                             ),
                           ),
                         ],
                       ),
-                    )
+                    ),
+
                   ],
                 ),
               );
@@ -335,7 +337,7 @@ class _CampaignSliderWidgetState extends State<CampaignSliderWidget> {
   Widget _buildFallbackImage() {
     return Container(
       width: double.infinity,
-      height: 200,
+      height: 220,
       decoration: BoxDecoration(
         color: Colors.grey.shade300,
         borderRadius: BorderRadius.circular(15),

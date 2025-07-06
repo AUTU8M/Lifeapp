@@ -59,7 +59,7 @@ class Datum {
     id: json["id"],
     title: json["title"],
     categoryId: json["category_id"],
-    coin: json["coin"],
+    coin: json["coin"]?.toString(),
     link: json["link"],
     details: json["details"],
     couponMediaId: json["coupon_media_id"] == null ? null : CouponMediaId.fromJson(json["coupon_media_id"]),

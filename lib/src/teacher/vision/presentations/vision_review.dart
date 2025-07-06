@@ -180,6 +180,21 @@ class _VisionReviewPageState extends State<VisionReviewPage> with SingleTickerPr
   List<String> _availableClasses = [];
   String _selectedStatusFilter = '';
   bool _isLoading = false;
+  IconData _getStatusIcon(SubmissionStatus status) {
+    switch (status) {
+      case SubmissionStatus.submitted:
+        return Icons.rate_review_outlined;
+      case SubmissionStatus.incomplete:
+        return Icons.error_outline;
+      case SubmissionStatus.rejected:
+        return Icons.cancel_outlined;
+      case SubmissionStatus.approved:
+        return Icons.check_circle_outline;
+      case SubmissionStatus.assigned:
+      default:
+        return Icons.hourglass_empty;
+    }
+  }
 
   @override
   void initState() {
@@ -190,7 +205,7 @@ class _VisionReviewPageState extends State<VisionReviewPage> with SingleTickerPr
 
   Future<void> _fetchSubmissions() async {
     setState(() => _isLoading = true);
-    
+
     try {
       final provider = Provider.of<VisionProvider>(context, listen: false);
       final participants = await provider.getVisionParticipants(
@@ -485,18 +500,18 @@ class _VisionReviewPageState extends State<VisionReviewPage> with SingleTickerPr
                 : null,
             child: submission.studentAvatar.isEmpty
                 ? Text(
-                    submission.studentName.isNotEmpty 
-                        ? submission.studentName[0].toUpperCase()
-                        : '?',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  )
+              submission.studentName.isNotEmpty
+                  ? submission.studentName[0].toUpperCase()
+                  : '?',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            )
                 : null,
           ),
           const SizedBox(width: 12),
-          
+
           // Student Name
           Expanded(
             child: Text(
@@ -507,7 +522,7 @@ class _VisionReviewPageState extends State<VisionReviewPage> with SingleTickerPr
               ),
             ),
           ),
-          
+
           // Status Button(s)
           _buildStatusButtons(submission),
         ],
@@ -516,130 +531,78 @@ class _VisionReviewPageState extends State<VisionReviewPage> with SingleTickerPr
   }
 
   Widget _buildStatusButtons(StudentSubmission submission) {
-    // For approved submissions, show both Approved and Details buttons
-    if (submission.status == SubmissionStatus.approved) {
+    final bool isReviewed = submission.status == SubmissionStatus.approved ||
+        submission.status == SubmissionStatus.rejected;
+
+    final buttonStyle = ElevatedButton.styleFrom(
+      elevation: 0,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      minimumSize: const Size(90, 36),
+      textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+    );
+
+    if (isReviewed) {
+      // Show status badge (disabled) + Details button
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // Approved Button
-          Container(
-            height: 36,
-            constraints: const BoxConstraints(minWidth: 80),
-            child: ElevatedButton(
-              onPressed: null, // Disabled since it's already approved
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF10B981),
-                disabledBackgroundColor: const Color(0xFF10B981),
-                disabledForegroundColor: Colors.white,
-                elevation: 0,
-                shadowColor: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                minimumSize: const Size(80, 36),
-              ),
-              child: const Text(
-                'Approved',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0.2,
-                ),
-              ),
+          ElevatedButton.icon(
+            onPressed: null,
+            icon: Icon(
+              submission.status == SubmissionStatus.approved
+                  ? Icons.check_circle_outline
+                  : Icons.cancel_outlined,
+              color: Colors.white,
+              size: 16,
             ),
+            label: Text(submission.status.displayName),
+            style: buttonStyle.copyWith(
+              backgroundColor: MaterialStateProperty.resolveWith((states) {
+                if (states.contains(MaterialState.disabled)) {
+                  return submission.status.color.withOpacity(0.6);
+                }
+                return submission.status.color;
+              }),
+              foregroundColor: MaterialStateProperty.all(Colors.white),
+            ),
+
           ),
           const SizedBox(height: 8),
-          // Details Button
-          Container(
-            height: 36,
-            constraints: const BoxConstraints(minWidth: 80),
-            child: ElevatedButton(
-              onPressed: () => _showSubmissionDetails(submission),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF3B82F6),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shadowColor: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                minimumSize: const Size(80, 36),
-              ),
-              child: const Text(
-                'Details',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0.2,
-                ),
-              ),
+          ElevatedButton.icon(
+            onPressed: () => _showSubmissionDetails(submission),
+            icon: const Icon(Icons.visibility_outlined, size: 16),
+            label: const Text("Details"),
+            style: buttonStyle.copyWith(
+              backgroundColor: MaterialStateProperty.all(const Color(0xFF3B82F6)),
+              foregroundColor: MaterialStateProperty.all(Colors.white),
             ),
           ),
         ],
       );
     }
-    
-    // For complete submissions, show only the Complete button (no approval needed)
-    if (submission.status == SubmissionStatus.approved) {
-      return Container(
-        height: 36,
-        constraints: const BoxConstraints(minWidth: 80),
-        child: ElevatedButton(
-          onPressed: () => _showSubmissionDetails(submission),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: submission.status.color,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            shadowColor: Colors.transparent,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(18),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            minimumSize: const Size(80, 36),
-          ),
-          child: const Text(
-            'Complete',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              letterSpacing: 0.2,
-            ),
-          ),
-        ),
-      );
-    }
-    
-    // For all other statuses, show single button
-    return Container(
-      height: 36,
-      constraints: const BoxConstraints(minWidth: 80),
-      child: ElevatedButton(
-        onPressed: submission.status == SubmissionStatus.assigned
-            ? null
-            : () => _handleStatusAction(submission),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: submission.status.color,
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: submission.status.color.withOpacity(0.6),
-          disabledForegroundColor: Colors.white,
-          elevation: 0,
-          shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          minimumSize: const Size(80, 36),
-        ),
-        child: Text(
-          submission.status.displayName,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            letterSpacing: 0.2,
-          ),
-        ),
+
+    // For submitted / incomplete / assigned
+    return ElevatedButton.icon(
+      onPressed: submission.status == SubmissionStatus.assigned
+          ? null
+          : () => _handleStatusAction(submission),
+      icon: Icon(
+        _getStatusIcon(submission.status),
+        size: 16,
+        color: Colors.white,
       ),
+      label: Text(submission.status.displayName),
+      style: buttonStyle.copyWith(
+        backgroundColor: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.disabled)) {
+            return submission.status.color.withOpacity(0.6);
+          }
+          return submission.status.color;
+        }),
+        foregroundColor: MaterialStateProperty.all(Colors.white),
+      ),
+
     );
   }
 
@@ -661,16 +624,72 @@ class _VisionReviewPageState extends State<VisionReviewPage> with SingleTickerPr
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        scrollable: true,
         title: Text('${submission.studentName}\'s Submission'),
         content: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Status: ${submission.status.displayName}'),
             if (submission.submissionDate != null)
               Text('Submitted: ${submission.submissionDate}'),
             if (submission.feedback != null)
-              Text('Feedback: ${submission.feedback}'),
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0, bottom: 8),
+                child: Text('Feedback: ${submission.feedback}'),
+              ),
+            const Divider(),
+            const Text(
+              "Answers:",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            ...submission.answers.asMap().entries.map((entry) {
+              final index = entry.key;
+              final answer = entry.value;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Q${index + 1}: ${answer.questionText}',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 4),
+                    if (answer.answerType == 'image')
+                      answer.imageUrl != null
+                          ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              answer.imageUrl!,
+                              height: 200,
+                              width: double.infinity,
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) =>
+                              const Text('⚠️ Error loading image'),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            answer.description?.isNotEmpty == true
+                                ? 'Description: ${answer.description}'
+                                : 'No description Submitted',
+                            style: const TextStyle(fontStyle: FontStyle.italic),
+                          ),
+                        ],
+                      )
+                          : const Text('📎 No image available'),
+                    if (answer.answerType != 'image')
+                      Text(
+                        answer.answerText.isNotEmpty ? answer.answerText : 'No answer provided',
+                      ),
+                  ],
+                ),
+              );
+            }).toList(),
           ],
         ),
         actions: [
@@ -745,75 +764,75 @@ class _VisionReviewPageState extends State<VisionReviewPage> with SingleTickerPr
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 12),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: submission.answers.length,
-                    itemBuilder: (context, index) {
-                      final answer = submission.answers[index];
-                      print('yuuuu ${answer.description}');
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Q${index + 1}: ${answer.questionText}',
-                              style: const TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                            const SizedBox(height: 6),
-                            if (answer.answerType == 'image')
-                              answer.imageUrl != null
-                                  ? Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: Image.network(
-                                      answer.imageUrl!,
-                                      height: 200,
-                                      width: double.infinity,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) {
-                                        return const Text('⚠️ Error loading image');
-                                      },
-                                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: submission.answers.length,
+                        itemBuilder: (context, index) {
+                          final answer = submission.answers[index];
+                          print('yuuuu ${answer.description}');
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Q${index + 1}: ${answer.questionText}',
+                                  style: const TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                                const SizedBox(height: 6),
+                                if (answer.answerType == 'image')
+                                  answer.imageUrl != null
+                                      ? Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.network(
+                                          answer.imageUrl!,
+                                          height: 200,
+                                          width: double.infinity,
+                                          fit: BoxFit.contain,
+                                          errorBuilder: (context, error, stackTrace) {
+                                            return const Text('⚠️ Error loading image');
+                                          },
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      RichText(
+                                        text: TextSpan(
+                                          style: const TextStyle(fontSize: 14, color: Colors.black),
+                                          children: [
+                                            const TextSpan(
+                                              text: 'Description: ',
+                                              style: TextStyle(fontWeight: FontWeight.w600),
+                                            ),
+                                            TextSpan(
+                                              text: answer.description?.toUpperCase() ?? 'No description provided',
+                                              style: const TextStyle(
+                                                color: Colors.black,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+
+
+                                    ],
+                                  )
+                                      : const Text('📎 No image available'),
+                                if (answer.answerType != 'image')
+                                  Text(
+                                    answer.answerText ?? 'No answer provided',
+                                    style: const TextStyle(fontSize: 13),
                                   ),
-                                  const SizedBox(height: 6),
-                      RichText(
-                      text: TextSpan(
-                      style: const TextStyle(fontSize: 14, color: Colors.black),
-                      children: [
-                      const TextSpan(
-                      text: 'Description: ',
-                      style: TextStyle(fontWeight: FontWeight.w600),
+                              ],
+                            ),
+                          );
+                        },
                       ),
-                      TextSpan(
-                      text: answer.description?.toUpperCase() ?? 'No description provided',
-                      style: const TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                      ),
-                      ],
-                      ),
-                      ),
-
-
-                                ],
-                              )
-                                  : const Text('📎 No image available'),
-                            if (answer.answerType != 'image')
-                              Text(
-                                answer.answerText ?? 'No answer provided',
-                                style: const TextStyle(fontSize: 13),
-                              ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
+                    ),
 
 
                     const SizedBox(height: 12),
@@ -834,7 +853,7 @@ class _VisionReviewPageState extends State<VisionReviewPage> with SingleTickerPr
                               ),
                               padding: const EdgeInsets.symmetric(vertical: 16),
                             ),
-                            child: const Text("Approve", style: TextStyle(fontSize: 16)),
+                            child: const Text("Approve", style: TextStyle(fontSize: 16 , color: Colors.white)),
                           ),
                         ),
                       ],
@@ -925,4 +944,3 @@ class _VisionReviewPageState extends State<VisionReviewPage> with SingleTickerPr
     }
   }
 }
-

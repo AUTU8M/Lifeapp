@@ -6,6 +6,7 @@ class VisionVideo {
   final String description;
   final String youtubeUrl;
   final String thumbnailUrl;
+  final String? subjectName;
   final String status; // "Completed", "Pending", "Start"
   final bool teacherAssigned;
   final bool isCompleted;
@@ -13,7 +14,7 @@ class VisionVideo {
   final bool isPending;
   final String? levelId;
   final VisionSubject? subject;
-
+  final int? visionTextImagePoints;
 
   VisionVideo({
     required this.id,
@@ -22,16 +23,19 @@ class VisionVideo {
     required this.youtubeUrl,
     required this.thumbnailUrl,
     required this.status,
+    this.subjectName,
     required this.teacherAssigned,
     required this.isCompleted,
     required this.isSkipped,
     required this.isPending,
     this.levelId,
     this.subject,
+    this.visionTextImagePoints,
   });
   factory VisionVideo.fromJson(Map<String, dynamic> json) {
     String videoId = '';
     String thumbnail = '';
+
     final statusStr = (json['status']?.toString() ?? '').toLowerCase();
 
     if (json.containsKey('youtubeUrl') && json['youtubeUrl'] != null) {
@@ -44,14 +48,21 @@ class VisionVideo {
     } else {
       thumbnail = 'https://via.placeholder.com/320x180?text=No+Video+URL';
     }
+
     String? levelId;
+    int? visionPoints;
+
     if (json.containsKey('level') && json['level'] != null) {
       final level = json['level'];
-      if (level is Map<String, dynamic> && level.containsKey('id')) {
-        levelId = level['id'].toString();
+      if (level is Map<String, dynamic>) {
+        if (level.containsKey('id')) {
+          levelId = level['id'].toString();
+        }
+        if (level.containsKey('vision_text_image_points')) {
+          visionPoints = level['vision_text_image_points'];
+        }
       }
     } else {
-      // fallback
       levelId = json['levelId']?.toString() ?? json['level_id']?.toString();
     }
 
@@ -62,11 +73,13 @@ class VisionVideo {
       youtubeUrl: json['youtubeUrl']?.toString() ?? '',
       thumbnailUrl: thumbnail,
       status: json['status']?.toString() ?? 'start',
+      subjectName: json['subject']?['title']?['en'] ?? '',
       teacherAssigned: json['teacherAssigned'] == true,
       isCompleted: statusStr == 'completed',
       isSkipped: statusStr == 'skipped',
       isPending: statusStr == 'pending',
       levelId: levelId,
+      visionTextImagePoints: visionPoints, // ✅ finally assign it here
     );
   }
 
@@ -137,6 +150,7 @@ class VisionSubject {
     return VisionSubject(
       id: json['id'].toString(),
       title: json['title'] ?? {},
+
     );
   }
 

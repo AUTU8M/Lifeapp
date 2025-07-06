@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import '../models/vision_model.dart';
 import '../services/vision_services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 
 class VisionProvider with ChangeNotifier {
   final TeacherVisionAPIService _apiService = TeacherVisionAPIService();
@@ -17,11 +21,21 @@ class VisionProvider with ChangeNotifier {
   String? _selectedSubjectId;
   bool _isLoading = false;
   String? _errorMessage;
+  // Pagination controls
+  int _currentPage = 1;
+  final int _perPage = 10;
+  bool _hasMoreAllVideos = true;
+  bool _hasMoreAssignedVideos = true;
+  bool _isLoadingMore = false;
 
   // Getters
+  bool get isLoadingMore => _isLoadingMore;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   List<Map<String, dynamic>> get subjects => _subjects;
+  bool _hasLoadedFromCache = false;
+  bool get hasMoreAllVideos => _hasMoreAllVideos;
+  bool get hasMoreAssignedVideos => _hasMoreAssignedVideos;
 
   VisionProvider() {
     _initializeData();
@@ -29,82 +43,151 @@ class VisionProvider with ChangeNotifier {
 
   Future<void> _initializeData() async {
     await _fetchSubjects();
-    await _fetchVideos();
+
+    if (!_hasLoadedFromCache) {
+      final hasCache = await _loadCachedVideos();
+      _hasLoadedFromCache = true;
+      if (!hasCache) {
+        await _fetchVideos(); // no cache — fetch now
+      }
+    } else {
+      await _fetchVideos(); // already loaded once — fetch fresh
+    }
+  }
+
+  Future<bool> _loadCachedVideos() async {
+    final prefs = await SharedPreferences.getInstance();
+    final cachedData = prefs.getString('cached_vision_videos');
+
+    if (cachedData != null) {
+      final List<dynamic> jsonData = jsonDecode(cachedData);
+      _allVideos.clear();
+      _allVideos.addAll(jsonData.map((e) => TeacherVisionVideo.fromJson(e)));
+      notifyListeners();
+      return true;
+    }
+
+    return false;
   }
 
   Future<void> _fetchSubjects() async {
+    final prefs = await SharedPreferences.getInstance();
     try {
       _subjects = await _apiService.getSubjects();
       debugPrint('🎉 Fetched ${_subjects.length} subjects');
 
-      // Add error handling for empty subjects
       if (_subjects.isEmpty) {
-        debugPrint('⚠️ No subjects returned from API, using fallback');
-        // Provide fallback subjects if needed
         _subjects = [
           {'id': '1', 'title': 'Science', 'name': 'Science'},
           {'id': '2', 'title': 'Maths', 'name': 'Maths'},
         ];
       }
+
+      // Cache the subjects
+      prefs.setString('cached_subjects', jsonEncode(_subjects));
     } catch (e) {
       debugPrint('❌ Error fetching subjects: $e');
-      // Provide fallback subjects
-      _subjects = [
-        {'id': '1', 'title': 'Science', 'name': 'Science'},
-        {'id': '2', 'title': 'Maths', 'name': 'Maths'},
-      ];
+
+      // Try to load from cache
+      final cached = prefs.getString('cached_subjects');
+      if (cached != null) {
+        _subjects = List<Map<String, dynamic>>.from(jsonDecode(cached));
+        debugPrint('📦 Loaded subjects from cache');
+      } else {
+        // Provide fallback
+        _subjects = [
+          {'id': '1', 'title': 'Science', 'name': 'Science'},
+          {'id': '2', 'title': 'Maths', 'name': 'Maths'},
+        ];
+      }
     }
   }
 
-  Future<void> _fetchVideos() async {
-    _isLoading = true;
-    _errorMessage = null;
+  Future<void> _fetchVideos({bool loadMore = false}) async {
+    if (_isLoading && !loadMore) return;
+    if (loadMore && (_isLoadingMore || (!_hasMoreAllVideos && !_hasMoreAssignedVideos))) return;
+
+    // Set loading states
+    if (!loadMore) {
+      _isLoading = true;
+      _currentPage = 1;
+      _hasMoreAllVideos = true;
+      _hasMoreAssignedVideos = true;
+      _allVideos.clear();
+      _assignedVideos.clear();
+    } else {
+      _isLoadingMore = true;
+      _currentPage++;
+    }
     notifyListeners();
 
+    final prefs = await SharedPreferences.getInstance();
+
     try {
-      // Fetch all vision videos from API
-      final allVideos =
-          await _apiService.getAllVisionVideos(subjectId: _selectedSubjectId);
+      // Fetch both types of videos in parallel
+      final results = await Future.wait([
+        _fetchAllVideosPage(),
+        _fetchAssignedVideosPage(),
+      ]);
 
-      _allVideos.clear();
-      _allVideos.addAll(allVideos);
+      final newAllVideos = results[0] as List<TeacherVisionVideo>;
+      final newAssignedVideos = results[1] as List<TeacherVisionVideo>;
 
-      // Fetch assigned videos from API
-      final assignedVideos =
-          await _apiService.getAssignedVideos(subjectId: _selectedSubjectId);
-      _assignedVideos.clear();
-      _assignedVideos.addAll(assignedVideos);
+      // Update video lists
+      _allVideos.addAll(newAllVideos);
+      _assignedVideos.addAll(newAssignedVideos);
 
-      debugPrint(
-          '🎉 Fetched ${_allVideos.length} total videos and ${_assignedVideos.length} assigned videos');
+      // Update pagination states
+      _hasMoreAllVideos = newAllVideos.length >= _perPage;
+      _hasMoreAssignedVideos = newAssignedVideos.length >= _perPage;
+
+      // Cache only first page
+      if (!loadMore) {
+        await prefs.setString('cached_all_videos', jsonEncode(_allVideos.map((e) => e.toJson()).toList()));
+        await prefs.setString('cached_assigned_videos', jsonEncode(_assignedVideos.map((e) => e.toJson()).toList()));
+      }
 
       _applyFilters();
-
-      // Clear any previous error messages on successful fetch
-      _errorMessage = null;
     } catch (e) {
       debugPrint('❌ Error fetching videos: $e');
-      _errorMessage =
-          'Failed to load videos. Please check your connection and try again.';
+      _errorMessage = 'Failed to load videos. ${e.toString()}';
 
-      // In case of error, still show mock data to prevent empty screen
-      _allVideos.clear();
-      _allVideos
-          .addAll(_apiService.getMockVideos(subjectId: _selectedSubjectId));
-
-      // For assigned videos, filter mock data
-      final mockAssigned = _apiService
-          .getMockVideos()
-          .where((video) => video.teacherAssigned)
-          .toList();
-      _assignedVideos.clear();
-      _assignedVideos.addAll(mockAssigned);
-
-      _applyFilters();
+      if (!loadMore) {
+        await _loadCachedVideos();
+      }
     } finally {
       _isLoading = false;
+      _isLoadingMore = false;
       notifyListeners();
     }
+  }
+
+  Future<List<TeacherVisionVideo>> _fetchAllVideosPage() async {
+    if (!_hasMoreAllVideos && _currentPage > 1) return [];
+
+    if (_selectedSubjectId != null) {
+      return await _apiService.getVisionVideosBySubject(
+        _selectedSubjectId!,
+        page: _currentPage,
+        perPage: _perPage,
+      );
+    }
+    return await _apiService.getAllVisionVideos(
+      page: _currentPage,
+      perPage: _perPage,
+    );
+  }
+
+  Future<List<TeacherVisionVideo>> _fetchAssignedVideosPage() async {
+    if (!_hasMoreAssignedVideos && _currentPage > 1) return [];
+
+    return await _apiService.getAssignedVideos(
+      subjectId: _selectedSubjectId,
+    );
+  }
+
+  Future<void> loadMoreVideos() async {
+    await _fetchVideos(loadMore: true);
   }
 
   void _applyFilters() {
@@ -150,7 +233,7 @@ class VisionProvider with ChangeNotifier {
     if (subject.isNotEmpty && _subjects.isNotEmpty) {
       try {
         final matchingSubject = _subjects.firstWhere(
-          (s) {
+              (s) {
             final name = s['name']?.toString() ?? s['title']?.toString() ?? '';
             return name.toLowerCase() == subject.toLowerCase();
           },
@@ -187,6 +270,7 @@ class VisionProvider with ChangeNotifier {
   Future<void> refreshVideos() async {
     await _fetchVideos();
   }
+
 
   // Method to clear all filters
   void clearFilters() {
@@ -299,11 +383,11 @@ class VisionProvider with ChangeNotifier {
     if (_subjects.isNotEmpty) {
       return _subjects
           .map((subject) {
-            // Try both 'name' and 'title' fields
-            return subject['name']?.toString() ??
-                subject['title']?.toString() ??
-                '';
-          })
+        // Try both 'name' and 'title' fields
+        return subject['name']?.toString() ??
+            subject['title']?.toString() ??
+            '';
+      })
           .where((name) => name.isNotEmpty)
           .toSet() // Remove duplicates
           .toList();
@@ -324,7 +408,7 @@ class VisionProvider with ChangeNotifier {
 
     try {
       final subject = _subjects.firstWhere(
-        (s) => s['id']?.toString() == subjectId,
+            (s) => s['id']?.toString() == subjectId,
         orElse: () => <String, dynamic>{},
       );
 
@@ -342,7 +426,7 @@ class VisionProvider with ChangeNotifier {
 
     try {
       final subject = _subjects.firstWhere(
-        (s) {
+            (s) {
           final name = s['name']?.toString() ?? s['title']?.toString() ?? '';
           return name.toLowerCase() == subjectName.toLowerCase();
         },

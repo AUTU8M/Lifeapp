@@ -5,10 +5,10 @@ import 'package:lifelab3/src/mentor/code/presentation/widgets/mentor_otp_widget.
 import 'package:lifelab3/src/mentor/code/provider/mentor_code_provider.dart';
 import 'package:lifelab3/src/mentor/code/services/mentor_login_service.dart';
 import 'package:provider/provider.dart';
-
 import '../../../../common/helper/image_helper.dart';
 import '../../../../common/helper/string_helper.dart';
 import '../../../../common/widgets/custom_button.dart';
+
 
 class CodePage extends StatelessWidget {
   const CodePage({super.key});
@@ -22,7 +22,6 @@ class CodePage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Image.asset(ImageHelper.welcomeImg2),
-
             Padding(
               padding: const EdgeInsets.only(left: 15, right: 15),
               child: Column(

@@ -140,7 +140,7 @@ class _ShopPageState extends State<ShopPage> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(20),
                 child: CachedNetworkImage(
-                  imageUrl: "https://media.gappubobo.com/${couponListModel!.data![index].couponMediaId!.url!}",
+                  imageUrl: "https://lifeappmedia.blr1.digitaloceanspaces.com/${couponListModel!.data![index].couponMediaId!.url!}",
                   placeholder: (img, _) => Container(
                     height: 100,
                     width: 100,
@@ -177,7 +177,7 @@ class _ShopPageState extends State<ShopPage> {
         ClipRRect(
           borderRadius: BorderRadius.circular(15),
           child: CachedNetworkImage(
-            imageUrl: "https://media.gappubobo.com/${couponListModel!.data![index].couponMediaId!.url!}",
+            imageUrl: "https://lifeappmedia.blr1.digitaloceanspaces.com/${couponListModel!.data![index].couponMediaId!.url!}",
             placeholder: (img, _) => Container(
               height: 100,
               width: 100,

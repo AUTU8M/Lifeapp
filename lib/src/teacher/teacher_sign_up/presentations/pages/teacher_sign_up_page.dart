@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import '../../../../common/helper/color_code.dart';
 import '../../../../common/helper/image_helper.dart';
 import '../../../../common/helper/string_helper.dart';
+import '../../../../common/utils/mixpanel_service.dart';
 import '../../../../common/widgets/custom_button.dart';
 import '../../../../common/widgets/custom_text_field.dart';
 
@@ -326,13 +327,27 @@ class _TeacherSignUpPageState extends State<TeacherSignUpPage> {
             const SizedBox(height: 40),
             Padding(
               padding: const EdgeInsets.only(left: 15, right: 15),
-              child: CustomButton(
+              child:CustomButton(
                 name: StringHelper.submit,
                 height: 50,
                 onTap: () {
+                  // ✅ Mixpanel tracking for Teacher Signup
+                  MixpanelService.track("Teacher Signup Clicked", properties: {
+                    "teacher_name": provider.teacherNameController.text,
+                    "mobile_no": widget.contact,
+                    "school_code": provider.schoolCodeController.text,
+                    "school_name": provider.schoolNameController.text,
+                    "state": provider.stateController.text,
+                    "city": provider.cityController.text,
+                    "board": provider.boardNameController.text,
+                    "grade_map_list": provider.gradeMapList,
+                    "timestamp": DateTime.now().toIso8601String(),
+                  });
+
                   provider.registerStudent(context, widget.contact);
                 },
               ),
+
             ),
 
             const SizedBox(height: 70),

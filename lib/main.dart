@@ -30,7 +30,6 @@ import 'package:lifelab3/src/student/student_login/provider/student_login_provid
 import 'package:lifelab3/src/student/subject_level_list/provider/subject_level_provider.dart';
 import 'package:lifelab3/src/student/subject_list/provider/subject_list_provider.dart';
 import 'package:lifelab3/src/student/tracker/provider/tracker_provider.dart';
-import 'package:lifelab3/src/student/vision/presentations/vision_page.dart';
 import 'package:lifelab3/src/teacher/student_progress/provider/student_progress_provider.dart';
 import 'package:lifelab3/src/teacher/teacher_dashboard/presentations/pages/teacher_dashboard_page.dart';
 import 'package:lifelab3/src/teacher/teacher_dashboard/provider/teacher_dashboard_provider.dart';
@@ -42,12 +41,10 @@ import 'package:lifelab3/src/utils/storage_utils.dart';
 import 'package:lifelab3/src/welcome/presentation/page/welcome_page.dart';
 import 'package:provider/provider.dart';
 import 'package:lifelab3/src/student/vision/providers/vision_provider.dart';
-
 import 'src/common/widgets/common_navigator.dart';
-
 import 'package:lifelab3/src/common/utils/version_check_service.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-
+import 'package:lifelab3/src/common/utils/mixpanel_service.dart';
 
 @pragma('vm:entry-point')
 void notificationTapBackground(NotificationResponse notificationResponse) {
@@ -120,7 +117,7 @@ void main() async {
     );
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
-
+  await MixpanelService.init();
   runApp(const MyApp());
 }
 

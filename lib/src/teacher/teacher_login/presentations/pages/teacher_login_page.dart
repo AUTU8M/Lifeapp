@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:lifelab3/src/teacher/teacher_login/provider/teacher_login_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:lifelab3/src/common/utils/mixpanel_service.dart';
 
 import '../../../../common/helper/image_helper.dart';
 import '../../../../common/helper/string_helper.dart';
@@ -72,6 +73,13 @@ class TeacherLoginPage extends StatelessWidget {
                     width: MediaQuery.of(context).size.width,
                     onTap: () {
                       if(provider.contactController.text.length == 10) {
+                        FocusScope.of(context).unfocus();
+
+                        // 🔹 Mixpanel: Track Login Attempt
+                        MixpanelService.track("Teacher Login Attempt", properties: {
+                          "phone": provider.contactController.text,
+                          "timestamp": DateTime.now().toIso8601String(),
+                        });
                         provider.sendOtpLogin();
                         teacherEnterPinSheet(context, provider);
 

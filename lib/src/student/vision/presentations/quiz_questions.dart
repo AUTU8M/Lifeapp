@@ -7,6 +7,75 @@ import '../../home/presentations/pages/home_page.dart';
 import '../../nav_bar/presentations/pages/nav_bar_page.dart';
 import '../providers/vision_provider.dart';
   import 'vision_page.dart';
+  import 'package:lifelab3/src/common/utils/mixpanel_service.dart';
+  import 'package:flutter/foundation.dart';
+
+  class SubmitButtonWithAnimatedText extends StatefulWidget {
+    final bool isLoading;
+    final bool isSubmitButton;
+    final VoidCallback? onPressed;
+
+    const SubmitButtonWithAnimatedText({
+      Key? key,
+      required this.isLoading,
+      this.isSubmitButton = true,
+      required this.onPressed,
+    }) : super(key: key);
+
+    @override
+    _SubmitButtonWithAnimatedTextState createState() => _SubmitButtonWithAnimatedTextState();
+  }
+  class _SubmitButtonWithAnimatedTextState extends State<SubmitButtonWithAnimatedText>
+      with SingleTickerProviderStateMixin {
+    late AnimationController _controller;
+    late Animation<double> _opacityAnimation;
+    @override
+    void initState() {
+      super.initState();
+      _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
+      _opacityAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(_controller);
+      _controller.forward();
+      _controller.addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          _controller.reverse();
+        } else if (status == AnimationStatus.dismissed) {
+          _controller.forward();
+        }
+      });
+    }
+
+    @override
+    void dispose() {
+      _controller.dispose();
+      super.dispose();
+    }
+
+    @override
+    Widget build(BuildContext context) {
+      return ElevatedButton(
+        onPressed: widget.isLoading ? null : widget.onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
+          minimumSize: const Size(double.infinity, 48),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        child: widget.isLoading && widget.isSubmitButton
+            ? FadeTransition(
+          opacity: _opacityAnimation,
+          child: const Text(
+            'Hold a sec... Submitting your answer',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            textAlign: TextAlign.center,
+          ),
+        )
+            : Text(
+          widget.isSubmitButton ? 'Submit' : 'Next',
+          style: const TextStyle(fontSize: 16),
+        ),
+      );
+    }
+  }
 
   class QuizScreen extends StatelessWidget {
     final String videoTitle;
@@ -82,6 +151,7 @@ import '../providers/vision_provider.dart';
     String? selectedOptionKey;
     List<Map<String, dynamic>> answers = [];
     int earnedCoins = 0;
+    bool _isSubmitting = false;
 
     @override
     void initState() {
@@ -119,7 +189,6 @@ import '../providers/vision_provider.dart';
         ),
       );
     }
-
     Widget _buildSubmitButton(VoidCallback onPressed) {
       return ElevatedButton(
         onPressed: onPressed,
@@ -316,36 +385,44 @@ import '../providers/vision_provider.dart';
       return Row(
         children: [
           Expanded(
-            child: ElevatedButton(
-              onPressed: () => _goToNextMCQ(context, currentQuestion, isLastQuestion),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 48),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: Text(
-                isLastQuestion ? 'Submit' : 'Next',
-                style: const TextStyle(fontSize: 16),
-              ),
+            child: SubmitButtonWithAnimatedText(
+              isLoading: _isSubmitting,
+              isSubmitButton: isLastQuestion,
+              onPressed: () async {
+                if (_isSubmitting) return; // prevent multiple taps
+                setState(() {
+                  _isSubmitting = true;
+                });
+                await _goToNextMCQ(context, currentQuestion, isLastQuestion);
+                setState(() {
+                  _isSubmitting = false;
+                });
+              },
+
             ),
           ),
         ],
       );
     }
-    void _goToNextMCQ(
+
+    Future<void> _goToNextMCQ(
         BuildContext context,
         Map<String, dynamic> currentQuestion,
         bool isLastQuestion,
-        ) {
+        ) async  {
       if (selectedOptionKey == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please select an option')),
         );
         return;
       }
+      // Track answer submission
+      MixpanelService.track("MCQ Answer Submitted", properties: {
+        "vision_id": widget.visionId,
+        "question_id": currentQuestion['id'].toString(),
+        "is_correct": selectedOptionKey == currentQuestion['correct_answer'],
+        "timestamp": DateTime.now().toIso8601String(),
+      });
       answers.add({
         'id': currentQuestion['id'].toString(),
         'answer': selectedOptionKey,
@@ -411,10 +488,69 @@ import '../providers/vision_provider.dart';
       }
     }
     Future<void> _submitQuiz(BuildContext context, VisionProvider visionProvider) async {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          return WillPopScope(
+            onWillPop: () async => false, // Disable back button while loading
+            child: Dialog(
+              backgroundColor: Colors.transparent,
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 12,
+                      offset: Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(
+                      width: 60,
+                      height: 60,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 6,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.blueAccent),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Hold a sec...',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Submitting your answer',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      );
+
       try {
         final result = await visionProvider.submitAnswersAndGetResult(
             widget.visionId, answers);
-        debugPrint('qawss $result');
+
+        Navigator.of(context).pop(); // Hide loading dialog
 
         if (!mounted) return;
 
@@ -425,27 +561,28 @@ import '../providers/vision_provider.dart';
           );
           return;
         }
-          // For option type, go to QuizCompletedScreen
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) =>
-                  ChangeNotifierProvider.value(
-                    value: visionProvider,
-                    child: QuizCompletedScreen(
-                      videoTitle: widget.videoTitle,
-                      visionId: widget.visionId,
-                      earnedCoins: earnedCoins,
-                      answer : answers,
-                      quizResult: result?['quiz_result'] as Map<String, dynamic>?,
-                      navName: widget.navName,
-                      subjectId: widget.subjectId,
-                    ),
-                  ),
-            ),
-          );
 
+        // Navigate to completed screen after submission
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChangeNotifierProvider.value(
+              value: visionProvider,
+              child: QuizCompletedScreen(
+                videoTitle: widget.videoTitle,
+                visionId: widget.visionId,
+                earnedCoins: earnedCoins,
+                answer: answers,
+                quizResult: result?['quiz_result'] as Map<String, dynamic>?,
+                navName: widget.navName,
+                subjectId: widget.subjectId,
+              ),
+            ),
+          ),
+        );
       } catch (e) {
+        Navigator.of(context).pop(); // Hide loading dialog
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Error submitting quiz: $e')),
@@ -455,30 +592,77 @@ import '../providers/vision_provider.dart';
     }
     Widget _buildOption(String key, String value) {
       final isSelected = selectedOptionKey == key;
-      return GestureDetector(
-        onTap: () {
-          setState(() {
-            selectedOptionKey = key;
-          });
-        },
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 6),
-          padding: const EdgeInsets.all(8),
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: isSelected
-                ? Colors.blue.withAlpha(179)
-                : Colors.white.withAlpha(179),
-            borderRadius: BorderRadius.circular(70),
-            border: Border.all(color: Colors.blue.shade400),
-          ),
-          child: Center(
-            child: Text(
-              '$key: $value',
-              style: TextStyle(
-                fontSize: 18,
-                color: isSelected ? Colors.white : Colors.black,
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () {
+            setState(() {
+              selectedOptionKey = key;
+            });
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: isSelected ? Colors.blue.shade600 : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected ? Colors.blue.shade800 : Colors.grey.shade300,
+                width: 2,
               ),
+              boxShadow: isSelected
+                  ? [
+                BoxShadow(
+                  color: Colors.blue.withOpacity(0.3),
+                  offset: const Offset(0, 4),
+                  blurRadius: 8,
+                ),
+              ]
+                  : [
+                BoxShadow(
+                  color: Colors.black12,
+                  offset: const Offset(0, 2),
+                  blurRadius: 6,
+                ),
+              ],
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Circle with key letter
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: isSelected ? Colors.white : Colors.blue.shade100,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    key.toUpperCase(),
+                    style: TextStyle(
+                      color: isSelected ? Colors.blue.shade600 : Colors.blue.shade700,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+
+                // Option Text
+                Expanded(
+                  child: Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: isSelected ? Colors.white : Colors.black87,
+                      height: 1.3,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -489,7 +673,27 @@ import '../providers/vision_provider.dart';
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           TextButton.icon(
-            onPressed: () => _showSkipWarning(context),
+            onPressed: () {
+              final vision = Provider.of<VisionProvider>(context, listen: false)
+                  .getVideoById(widget.visionId);
+
+              if (vision == null) {
+                // Fallback if vision not found
+                debugPrint('⚠️ Vision not found for ID ${widget.visionId}');
+                return;
+              }
+
+              final status = vision.status.toLowerCase();
+
+              if (status == 'submitted' || status == 'completed') {
+                // 🚀 Skip the dialog and go directly to home
+                Navigator.pop(context); // close current screen
+                Navigator.pop(context);
+              } else {
+                // 🔁 Show the skip confirmation dialog
+                _showSkipWarning(context);
+              }
+            },
             icon: const Icon(Icons.arrow_back, color: Colors.blue),
             label: const Text(
               'Skip',
@@ -497,9 +701,16 @@ import '../providers/vision_provider.dart';
             ),
             style: TextButton.styleFrom(padding: EdgeInsets.zero),
           ),
+
           if (widget.onReplayVideo != null)
             OutlinedButton.icon(
               onPressed: () {
+                // Track rewatch action
+                MixpanelService.track("Vision Rewatch", properties: {
+                  "vision_id": widget.visionId,
+                  "timestamp": DateTime.now().toIso8601String(),
+                  "screen": "mcq_questions",
+                });
                 widget.onReplayVideo!();
                 Navigator.pop(context);
               },
@@ -526,6 +737,7 @@ import '../providers/vision_provider.dart';
       );
     }
     void _showSkipWarning(BuildContext context) {
+
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -571,6 +783,19 @@ import '../providers/vision_provider.dart';
     final TextEditingController _answerController = TextEditingController();
     int earnedCoins = 0;
     late List<Map<String, dynamic>> _answers;
+
+    Route createFadeRoute(Widget page) {
+      return PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => page,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 500),
+      );
+    }
     @override
     void initState() {
       super.initState();
@@ -609,10 +834,15 @@ import '../providers/vision_provider.dart';
                 ),
               ),
             );
-          } else if (mounted) {
-            const Scaffold(
-              body: Center(child: Text('No image question found.'))
-
+          } else if (mounted && !_isSubmitting) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => const Scaffold(
+                  body: Center(
+                    child: Text('No descriptive or image question found.'),
+                  ),
+                ),
+              ),
             );
           }
         });
@@ -724,6 +954,33 @@ import '../providers/vision_provider.dart';
         ),
       );
     }
+    void showLoadingDialog(BuildContext context, {String message = 'Submitting your answer...'}) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 32),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(width: 20),
+                Flexible(
+                  child: Text(
+                    message,
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     void _goToNextScreen(BuildContext context, VisionProvider visionProvider) {
       final hasImage =
           visionProvider.currentQuestions?['image_question'] != null;
@@ -750,15 +1007,28 @@ import '../providers/vision_provider.dart';
       }
     }
     bool _isSubmitting = false;
-    Future<void> _submitQuiz(
-        BuildContext context, VisionProvider visionProvider) async {
-      if (_isSubmitting) return; // Prevent multiple calls
+    Future<void> _submitQuiz(BuildContext context, VisionProvider visionProvider) async {
+      if (_isSubmitting) return;
       _isSubmitting = true;
+
       try {
-        final result = await visionProvider.submitAnswersAndGetResult(
-            widget.visionId, _answers);
-        debugPrint('qawss3 $result');
+        // Show loader
+        showLoadingDialog(context, message: 'Submitting your answer...');
+
+        // Mixpanel Tracking
+        MixpanelService.track("Descriptive Answer Submitted", properties: {
+          "vision_id": widget.visionId,
+          "answer_length": _answerController.text.length,
+          "timestamp": DateTime.now().toIso8601String(),
+        });
+
+        final result = await visionProvider.submitAnswersAndGetResult(widget.visionId, _answers);
+
+        // Close loader
+        Navigator.of(context).pop();
+
         if (!mounted) return;
+
         if (result != null && result['submission_successful'] == false) {
           final errorMessage = result['error']?.toString() ?? 'Submission failed';
           ScaffoldMessenger.of(context).showSnackBar(
@@ -767,60 +1037,85 @@ import '../providers/vision_provider.dart';
           _isSubmitting = false;
           return;
         }
-        // Show dialog and navigate
+
+        // ✅ Show success dialog
         await showDialog(
           context: context,
-          builder: (context) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: const Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.green, size: 28),
-                SizedBox(width: 8),
-                Text(
-                  'Submission Successful',
-                  style: TextStyle(fontWeight: FontWeight.bold ,fontSize: 18),
+          barrierDismissible: false,
+          builder: (context) => Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 28),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.blue.shade800, Colors.blue.shade400],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-              ],
-            ),
-            content: const Text(
-              'Your answers have been submitted for review. You will be notified once it is reviewed.',
-              style: TextStyle(fontSize: 12),
-            ),
-            actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            actions: [
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blue.withOpacity(0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
                   ),
-                  onPressed: () {
-                    Navigator.pop(context);
-                    visionProvider.clearQuizQuestions();
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => NavBarPage(currentIndex: 0),
-                      ),
-                    );
-                  },
-
-                  child: const Text(
-                    'Done',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
-                ),
+                ],
               ),
-            ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.check_circle_outline, size: 60, color: Colors.white),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Hooray!',
+                    style: TextStyle(
+                      fontSize: 22,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Your answers are on their way to the review squad. We’ll ping you as soon as they’re graded keep up the great work! ',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context); // close current screen
+                        Navigator.pop(context);
+                      },
+                      child: const Text(
+                        'Go to vision',
+                        style: TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    )
+                  )],
+              ),
+            ),
           ),
         );
       } catch (e) {
+        Navigator.of(context).pop(); // Close loader on error
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Error submitting quiz: $e')),
@@ -830,12 +1125,33 @@ import '../providers/vision_provider.dart';
         _isSubmitting = false;
       }
     }
+
     Widget _buildTopNavigation(BuildContext context) {
       return Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           TextButton.icon(
-            onPressed: () => _showSkipWarning(context),
+            onPressed: () {
+              final vision = Provider.of<VisionProvider>(context, listen: false)
+                  .getVideoById(widget.visionId);
+
+              if (vision == null) {
+                // Fallback if vision not found
+                debugPrint('⚠️ Vision not found for ID ${widget.visionId}');
+                return;
+              }
+
+              final status = vision.status.toLowerCase();
+
+              if (status == 'submitted' || status == 'completed') {
+                // 🚀 Skip the dialog and go directly to home
+                Navigator.pop(context); // close current screen
+                Navigator.pop(context);
+              } else {
+                // 🔁 Show the skip confirmation dialog
+                _showSkipWarning(context);
+              }
+            },
             icon: const Icon(Icons.arrow_back, color: Colors.blue),
             label: const Text(
               'Skip',
@@ -843,9 +1159,16 @@ import '../providers/vision_provider.dart';
             ),
             style: TextButton.styleFrom(padding: EdgeInsets.zero),
           ),
+
           OutlinedButton.icon(
             onPressed: widget.onReplayVideo != null
                 ? () {
+              // Track rewatch action
+              MixpanelService.track("Vision Rewatch", properties: {
+                "vision_id": widget.visionId,
+                "timestamp": DateTime.now().toIso8601String(),
+                "screen": "descriptive_question",
+              });
               widget.onReplayVideo!();
               Navigator.pop(context);
             }
@@ -912,6 +1235,19 @@ import '../providers/vision_provider.dart';
     XFile? _imageFile;
     int earnedCoins = 0;
     List<Map<String, dynamic>> _answers1 = [];
+
+    Route createFadeRoute(Widget page) {
+      return PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => page,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 500),
+      );
+    }
     @override
     void initState() {
       super.initState();
@@ -1096,12 +1432,43 @@ import '../providers/vision_provider.dart';
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           TextButton.icon(
-            onPressed: () => _showSkipWarning(context),
-            icon: const Icon(Icons.arrow_back),
-            label: const Text('Skip'),
+            onPressed: () {
+              final vision = Provider.of<VisionProvider>(context, listen: false)
+                  .getVideoById(widget.visionId);
+
+              if (vision == null) {
+                // Fallback if vision not found
+                debugPrint('⚠️ Vision not found for ID ${widget.visionId}');
+                return;
+              }
+
+              final status = vision.status.toLowerCase();
+
+              if (status == 'submitted' || status == 'completed') {
+                // 🚀 Skip the dialog and go directly to home
+                Navigator.pop(context); // close current screen
+                Navigator.pop(context);
+              } else {
+                // 🔁 Show the skip confirmation dialog
+                _showSkipWarning(context);
+              }
+            },
+            icon: const Icon(Icons.arrow_back, color: Colors.blue),
+            label: const Text(
+              'Skip',
+              style: TextStyle(color: Colors.blue, fontSize: 16),
+            ),
+            style: TextButton.styleFrom(padding: EdgeInsets.zero),
           ),
+
           OutlinedButton.icon(
             onPressed: () {
+              // Track rewatch action
+              MixpanelService.track("Vision Rewatch", properties: {
+                "vision_id": widget.visionId,
+                "timestamp": DateTime.now().toIso8601String(),
+                "screen": "image_question",
+              });
               widget.onReplayVideo?.call();
               Navigator.pop(context);
             },
@@ -1109,6 +1476,31 @@ import '../providers/vision_provider.dart';
             label: const Text('Rewatch'),
           ),
         ],
+      );
+    }
+    void showLoadingDialog(BuildContext context, {String message = 'Submitting '
+        'answers...'}) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 32),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(width: 20),
+                Text(
+                  message,
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
 
@@ -1120,38 +1512,37 @@ import '../providers/vision_provider.dart';
         );
         return;
       }
-
+      // Track image submission
+      MixpanelService.track("Image Answer Submitted", properties: {
+        "vision_id": widget.visionId,
+        "image_size": File(_imageFile!.path).lengthSync(),
+        "description_length": _descriptionController.text.length,
+        "timestamp": DateTime.now().toString(),
+      });
       // Use actual description if entered, or fallback text
       final description = _descriptionController.text.trim().isNotEmpty
           ? _descriptionController.text.trim()
-          : "Uploaded image"; // ✅ fallback
-
+          : 'No Description Submitted';  // ✅ fallback
       _answers1.add({
         'id': visionProvider.currentQuestions?['image_question']?['id'].toString(),
         'answer': description,
         'image_path': _imageFile!.path,
         'type': 'image',
       });
-
       debugPrint('✅ Final submitted answers: $_answers1');
-
       await _submitQuiz(context, visionProvider);
     }
-
     bool _isSubmitting = false;
-
-    Future<void> _submitQuiz(
-        BuildContext context, VisionProvider visionProvider) async {
-      if (_isSubmitting) return; // Prevent multiple calls
+    Future<void> _submitQuiz(BuildContext context, VisionProvider visionProvider) async {
+      if (_isSubmitting) return;
       _isSubmitting = true;
-
       try {
-        final result = await visionProvider.submitAnswersAndGetResult(
-            widget.visionId, _answers1);
-        debugPrint('qawss2 $result');
-
+        // Show loading dialog
+        showLoadingDialog(context);
+        final result = await visionProvider.submitAnswersAndGetResult(widget.visionId, _answers1);
+        // Hide loading dialog
+        Navigator.of(context).pop();
         if (!mounted) return;
-
         if (result != null && result['submission_successful'] == false) {
           final errorMessage = result['error']?.toString() ?? 'Submission failed';
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1160,59 +1551,13 @@ import '../providers/vision_provider.dart';
           _isSubmitting = false;
           return;
         }
-        // Show dialog and navigate
-        await showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: const Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.green, size: 28),
-                SizedBox(width: 8),
-                Text(
-                  'Submission Successful',
-                  style: TextStyle(fontWeight: FontWeight.bold , fontSize: 18),
-                ),
-              ],
-            ),
-            content: const Text(
-              'Your answers have been submitted for review. You will be notified once it is reviewed.',
-              style: TextStyle(fontSize: 16),
-            ),
-            actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            actions: [
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  onPressed: () {
-                    Navigator.pop(context);
-                    visionProvider.clearQuizQuestions();
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => NavBarPage(currentIndex: 0),
-                      ),
-                    );
-                  },
-                  child: const Text(
-                    'Done',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
+        // Show success dialog here (use your fancy dialog)
+        await showSubmissionSuccessDialog(context, visionProvider);
+
       } catch (e) {
+        // Hide loading dialog if error occurs
+        Navigator.of(context).pop();
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Error submitting quiz: $e')),
@@ -1221,6 +1566,112 @@ import '../providers/vision_provider.dart';
       } finally {
         _isSubmitting = false;
       }
+    }
+
+    // Show dialog and navigate
+    Future<void> showSubmissionSuccessDialog(BuildContext context, VisionProvider visionProvider) {
+      return showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 28),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.blue.shade700, Colors.blue.shade400],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.blue.withOpacity(0.4),
+                  offset: const Offset(0, 12),
+                  blurRadius: 24,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.white.withOpacity(0.25),
+                        blurRadius: 16,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(20),
+                  child:
+                  const Icon(Icons.check_circle_outline, size: 60, color: Colors.white),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'Hooray! Submission Received',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Your answers are on their way to the review team. '
+                      'You will be notified once they have been checked. '
+                      'Thank you for your effort!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    height: 1.5,
+                    color: Colors.white70,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      backgroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(36),
+                      ),
+                      elevation: 8,
+                      shadowColor: Colors.white70,
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      visionProvider.clearQuizQuestions();
+                      Navigator.pop(context); // close current screen
+                      Navigator.pop(context);
+                    },
+                    child: const Text(
+                      'Go to Vision',
+                      style: TextStyle(
+                        color: Colors.blue,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
     }
 
 
@@ -1262,13 +1713,25 @@ import '../providers/vision_provider.dart';
     @override
     State<QuizCompletedScreen> createState() => _QuizCompletedScreenState();
   }
-
+  late Map<String, dynamic>? _quiz = {};
   class _QuizCompletedScreenState extends State<QuizCompletedScreen> {
 
     Map<String, dynamic>? _quizResult;
     bool _isLoading = false;
     String? _error;
     late List<Map<String, dynamic>> answer;
+    Route createFadeRoute(Widget page) {
+      return PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => page,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 500),
+      );
+    }
 
     @override
     void initState() {
@@ -1278,8 +1741,9 @@ import '../providers/vision_provider.dart';
             .fetchQuizQuestions(widget.visionId);
       });
       _quizResult = widget.quizResult;
+      _quiz = _quizResult;
       answer = widget.answer;
-      debugPrint("poi $answer");
+      debugPrint("poisa $answer");
       if (_quizResult == null) {
         _fetchResult();
       }
@@ -1611,20 +2075,29 @@ import '../providers/vision_provider.dart';
                     const SizedBox(height: 24),
                     ElevatedButton(
                       onPressed: () {
-                        Provider.of<VisionProvider>(context, listen: false)
-                            .clearQuizQuestions();
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => VisionPage(
-                              navName: widget.navName,
-                              subjectId: widget.subjectId,
-                              levelId: '',
+                        Provider.of<VisionProvider>(context, listen: false).clearQuizQuestions();
 
-                            ),
+                        Navigator.pop(context); // close current screen
+                        Navigator.pop(context);
 
-                          ),
-                        );
+                        // Wait for transition, then show snackbar
+                        Future.delayed(const Duration(milliseconds: 600), () {
+                          // Ensure context is still valid after navigation
+                          final navContext = navKey.currentContext;
+                          if (navContext != null) {
+                            ScaffoldMessenger.of(navContext).showSnackBar(
+                              SnackBar(
+                                content: const Text(
+                                  "🎉 Your vision has been submitted!",
+                                  style: TextStyle(fontSize: 15),
+                                ),
+                                backgroundColor: Colors.green,
+                                duration: const Duration(seconds: 3),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        });
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue,
@@ -1635,7 +2108,7 @@ import '../providers/vision_provider.dart';
                         ),
                       ),
                       child: const Text(
-                        'Back to Vision',
+                        'Go to Vision',
                         style: TextStyle(fontSize: 16),
                       ),
                     ),
@@ -1681,6 +2154,7 @@ import '../providers/vision_provider.dart';
     @override
     Widget build(BuildContext context) {
       final visionProvider = Provider.of<VisionProvider>(context, listen: false);
+      final pointsToLose = visionProvider.currentVisionPoints;
 
       return Scaffold(
         body: QuizBackground(
@@ -1691,88 +2165,120 @@ import '../providers/vision_provider.dart';
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    const SizedBox(height: 12),
                     const Text(
-                      'You Are Going\nto Lose',
+                      ' Uh-oh!!',
                       style: TextStyle(
-                        fontSize: 24,
+                        fontSize: 35,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: Colors.red,
+                        letterSpacing: 0,
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 24),
-                    Image.asset(
-                      'assets/images/coin.png',
-                      height: 64,
-                      width: 64,
-                      fit: BoxFit.contain,
-                    ),
-                    const SizedBox(height: 16),
                     const Text(
-                      '50',
+                      'You\'re about to lose',
                       style: TextStyle(
-                        fontSize: 48,
+                        fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Colors.red,
+                        color: Colors.black87,
+                        letterSpacing: 0,
                       ),
+                      textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Coins if you skip',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.black54,
-                      ),
+                    const SizedBox(height: 12),
+                    Image.asset(
+                      "assets/images/coins_icon.png",
+                      fit: BoxFit.fill,
+                      height: 70,
                     ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
+                    Column(
+                      children: [
+                        const SizedBox(height: 12),
+                        Text(
+                          '$pointsToLose coins',
+                          style: const TextStyle(
+                            fontSize: 36,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.redAccent,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Complete this challenge now to boost your balance and level up—your adventure awaits! ',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.black54,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 40),
+                    const SizedBox(height: 40),
+
+                    // 🌟 Stay button (Encouraged)
+                    ElevatedButton.icon(
                       onPressed: () => Navigator.pop(context),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
+                        backgroundColor: Colors.green.shade600,
                         foregroundColor: Colors.white,
                         minimumSize: const Size(double.infinity, 48),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
                         ),
+                        elevation: 3,
                       ),
-                      child: const Text(
-                        'Stay',
-                        style: TextStyle(fontSize: 16),
+                      icon: const Icon(Icons.check_circle_outline),
+                      label: const Text(
+                        'I’ll Stay',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                       ),
                     ),
+
                     const SizedBox(height: 16),
-                    ElevatedButton(
+
+                    // 🕒 Do Later
+                    ElevatedButton.icon(
                       onPressed: () => _handleDoLater(context, visionProvider),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
+                        backgroundColor: Colors.orange.shade700,
                         foregroundColor: Colors.white,
                         minimumSize: const Size(double.infinity, 48),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
                         ),
+                        elevation: 2,
                       ),
-                      child: const Text(
-                        'Do Later',
+                      icon: const Icon(Icons.access_time),
+                      label: const Text(
+                        'Do It Later',
                         style: TextStyle(fontSize: 16),
                       ),
                     ),
+
                     const SizedBox(height: 16),
-                    ElevatedButton(
+
+                    // ❌ Skip button (Negative style)
+                    ElevatedButton.icon(
                       onPressed: () => _handleSkip(context, visionProvider),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
+                        backgroundColor: Colors.red.shade700,
                         foregroundColor: Colors.white,
                         minimumSize: const Size(double.infinity, 48),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
                         ),
+                        elevation: 1,
                       ),
-                      child: const Text(
-                        'Skip',
+                      icon: const Icon(Icons.close_rounded),
+                      label: const Text(
+                        'Skip Anyway',
                         style: TextStyle(fontSize: 16),
                       ),
                     ),
                   ],
+
                 ),
               ),
             ),
@@ -1781,11 +2287,22 @@ import '../providers/vision_provider.dart';
       );
     }
 
-    Future<void> _handleSkip(
-        BuildContext context, VisionProvider visionProvider) async {
+    Future<void> _handleSkip(BuildContext context, VisionProvider visionProvider) async {
       try {
+        MixpanelService.track("Vision Skip Initiated", properties: {
+          "vision_id": visionId,
+          "timestamp": DateTime.now().toString(),
+          "action_type": "skip",
+        });
         final success = await visionProvider.skipQuiz(visionId);
-        if (!success) debugPrint('⚠️ Skip API returned false');
+        if (success) {
+          MixpanelService.track("Vision Skipped", properties: {
+            "vision_id": visionId,
+            "timestamp": DateTime.now().toString(),
+            "coins_lost": 50,
+            "device_type": Platform.isAndroid ? "android" : Platform.isIOS ? "ios" : "other",
+          });
+        }
       } catch (e) {
         debugPrint('💥 Error skipping quiz: $e');
         if (context.mounted) {
@@ -1796,24 +2313,28 @@ import '../providers/vision_provider.dart';
       } finally {
         if (context.mounted) {
           visionProvider.clearQuizQuestions();
-
           Navigator.pop(context);
-          Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (context) => NavBarPage(currentIndex: 0), // or WelComePage(), etc.
-            ),
-                (Route<dynamic> route) => false,
-          );
-
-
+          Navigator.pop(context);
+          Navigator.pop(context);
         }
       }
     }
-
-    Future<void> _handleDoLater(
-        BuildContext context, VisionProvider visionProvider) async {
+    Future<void> _handleDoLater(BuildContext context, VisionProvider visionProvider) async {
       try {
+        // Track do later action
+        MixpanelService.track("Vision Do Later Initiated", properties: {
+          "vision_id": visionId,
+          "timestamp": DateTime.now().toString(),
+        });
+
         final success = await visionProvider.markQuizPending(visionId);
+        if (success) {
+          MixpanelService.track("Vision Do Later", properties: {
+            "vision_id": visionId,
+            "timestamp": DateTime.now().toString(),
+            "device_type": Platform.isAndroid ? "android" : Platform.isIOS ? "ios" : "other",
+          });
+        }
         if (!success) debugPrint('⚠️ Mark pending API returned false');
       } catch (e) {
         debugPrint('💥 Error marking quiz pending: $e');
@@ -1825,18 +2346,15 @@ import '../providers/vision_provider.dart';
       } finally {
         if (context.mounted) {
           visionProvider.clearQuizQuestions();
-          // Same navigation approach for consistency
-          Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (context) => NavBarPage(currentIndex: 0), // or WelComePage(), etc.
-            ),
-                (Route<dynamic> route) => false,
-          );
+
+          // 👇 Pop twice (exit DoLater and go back to video or list)
+          Navigator.pop(context); // Closes SkipWarningScreen
+          Navigator.pop(context);
+          Navigator.pop(context); // Closes previous screen (like quiz page or video page)
         }
       }
     }
   }
-
   void launchQuiz(
       BuildContext context,
       String videoTitle,

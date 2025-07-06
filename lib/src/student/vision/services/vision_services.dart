@@ -7,9 +7,12 @@ import '../../../common/helper/string_helper.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import 'package:lifelab3/src/common/utils/mixpanel_service.dart';
+
 class VisionAPIService {
   static const String baseUrl = 'https://api.life-lab.org/v3';
   static const int _requestTimeout = 15;
+
   Future<String?> _getAuthToken() async {
     try {
       final token = StorageUtil.getString(StringHelper.token);
@@ -24,47 +27,18 @@ class VisionAPIService {
       return null;
     }
   }
-  Future<void> debugStorageState() async {
-    debugPrint('🔧 === STORAGE DEBUG SESSION ===');
-    try {
-      // Test basic storage functionality
-      final testKey = 'debug_test_${DateTime.now().millisecondsSinceEpoch}';
-      const testValue = 'test_value_123';
 
-      await StorageUtil.putString(testKey, testValue);
-
-      final retrieved = StorageUtil.getString(testKey);
-
-      if (retrieved == testValue) {
-        debugPrint('✅ Storage read/write test PASSED');
-      } else {
-        debugPrint(
-            '❌ Storage read/write test FAILED: expected $testValue, got $retrieved');
-      }
-
-      // Clean up test
-      // await StorageUtil.remove(testKey); // Uncomment if you have a remove method
-    } catch (e) {
-      debugPrint('❌ Storage test error: $e');
-    }
-    debugPrint('🔧 === END STORAGE DEBUG ===');
-  }
-  // Helper method to debug storage keys (optional)
-  Future<List<String>> _getAllStorageKeys() async {
-    // This is a placeholder - implement based on your StorageUtil
-    // You might need to modify this based on your storage implementation
-    return [];
-  }
   Map<String, String> _getHeaders(String token) => {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      };
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer $token',
+  };
+
   Future<http.Response> _makeRequest(
-    String method,
-    String endpoint, {
-    Map<String, dynamic>? body,
-  }) async {
+      String method,
+      String endpoint, {
+        Map<String, dynamic>? body,
+      }) async {
     final token = await _getAuthToken();
     if (token == null) throw Exception('No authentication token');
 
@@ -76,9 +50,10 @@ class VisionAPIService {
 
     try {
       final response = await (method.toUpperCase() == 'GET'
-              ? http.get(uri, headers: headers)
-              : http.post(uri, headers: headers, body: json.encode(body)))
+          ? http.get(uri, headers: headers)
+          : http.post(uri, headers: headers, body: json.encode(body)))
           .timeout(const Duration(seconds: _requestTimeout));
+
       debugPrint('📡 Status: ${response.statusCode}');
       if (response.body.isNotEmpty) debugPrint('📡 Response: ${response.body}');
       return response;
@@ -96,7 +71,7 @@ class VisionAPIService {
     try {
       final decoded = json.decode(response.body);
       if (decoded is Map<String, dynamic>) return decoded;
-      debugPrint('❌ Response is not a JSON object: $decoded');
+      debugPrint('❌ Response is not a JSON object');
       return null;
     } catch (e) {
       debugPrint('❌ JSON parse error: $e');
@@ -152,11 +127,11 @@ class VisionAPIService {
     }
   }
 
-  Future<List<VisionVideo>> getVisionVideos(String subjectId , String levelId) async {
+  Future<List<VisionVideo>> getVisionVideos(String subjectId, String levelId) async {
     try {
-      debugPrint('🔄 Fetching videos for subject: $subjectId , $levelId');
-      final response =
-          await _makeRequest('GET', '/vision/list?la_subject_id=$subjectId&la_level_id=$levelId');
+      debugPrint('🔄 Fetching videos for subject: $subjectId, $levelId');
+      final response = await _makeRequest(
+          'GET', '/vision/list?la_subject_id=$subjectId&la_level_id=$levelId');
 
       if (response.statusCode != 200) _handleErrorResponse(response);
 
@@ -189,7 +164,7 @@ class VisionAPIService {
       } else if (data['data'] is List) {
         videoData = data['data'] as List;
       }
-  }
+    }
 
     if (videoData.isEmpty) {
       debugPrint('⚠️ No videos found');
@@ -199,13 +174,13 @@ class VisionAPIService {
     return videoData
         .whereType<Map<String, dynamic>>()
         .map((item) {
-          try {
-            return VisionVideo.fromJson(item);
-          } catch (e) {
-            debugPrint('⚠️ Error parsing video: $e');
-            return null;
-          }
-        })
+      try {
+        return VisionVideo.fromJson(item);
+      } catch (e) {
+        debugPrint('⚠️ Error parsing video: $e');
+        return null;
+      }
+    })
         .whereType<VisionVideo>()
         .toList();
   }
@@ -229,28 +204,23 @@ class VisionAPIService {
       Map<String, dynamic>? imageQuestion;
 
       if (raw is List) {
-        // iterate and bucket by question_type
         for (var q in raw) {
           switch (q['question_type']) {
             case 'mcq':
               mcqQuestions.add(q);
               break;
-            case 'reflection':  // or however you name descriptive
+            case 'reflection':
               descriptiveQuestion = q;
               break;
             case 'image':
               imageQuestion = q;
               break;
-            default:
-            // if you have more types, handle them here
-              break;
           }
         }
       } else if (raw is Map) {
-        // your existing logic for structured Map response
-        mcqQuestions       = raw['mcq_questions']       ?? [];
+        mcqQuestions = raw['mcq_questions'] ?? [];
         descriptiveQuestion = raw['descriptive_question'];
-        imageQuestion       = raw['image_question'];
+        imageQuestion = raw['image_question'];
       }
 
       return {
@@ -271,7 +241,6 @@ class VisionAPIService {
       ) async {
     try {
       debugPrint('🔄 Submitting answers for vision: $visionId');
-      await debugStorageState();
 
       final cleanAnswers = _cleanAndValidateAnswers(answers);
       if (cleanAnswers.isEmpty) {
@@ -285,21 +254,21 @@ class VisionAPIService {
 
       String formatDuration(Duration d) {
         String two(int n) => n.toString().padLeft(2, '0');
-        return "\${two(d.inHours)}:\${two(d.inMinutes % 60)}:\${two(d.inSeconds % 60)}";
+        return "${two(d.inHours)}:${two(d.inMinutes % 60)}:${two(d.inSeconds % 60)}";
       }
       const duration = Duration(seconds: 75);
       final timing = formatDuration(duration);
 
       // Submit MCQ answers
-      final mcqAnswers = cleanAnswers
-          .where((a) => a['type'] == 'mcq')
-          .map((a) => {
-        'question_id': a['id'],
-        'answer_option': a['answer'].toString(),
-      })
-          .toList();
+      if (cleanAnswers.any((a) => a['type'] == 'mcq')) {
+        final mcqAnswers = cleanAnswers
+            .where((a) => a['type'] == 'mcq')
+            .map((a) => {
+          'question_id': a['id'],
+          'answer_option': a['answer'].toString(),
+        })
+            .toList();
 
-      if (mcqAnswers.isNotEmpty) {
         final body = {
           'vision_id': int.tryParse(visionId),
           'timing': timing,
@@ -308,7 +277,6 @@ class VisionAPIService {
         };
 
         final response = await _makeRequest('POST', '/vision/complete', body: body);
-
         if (response.statusCode != 200 && response.statusCode != 201) {
           _handleErrorResponse(response);
           return null;
@@ -316,99 +284,117 @@ class VisionAPIService {
       }
 
       // Submit Descriptive answers
-      for (final ans in cleanAnswers.where((a) => a['type'] == 'descriptive')) {
-        final body = {
-          'vision_id': int.tryParse(visionId),
-          'timing': timing,
-          'answer_type': 'text',
-          'question_id': ans['id'],
-          'answer_text': ans['answer'].toString(),
-        };
-        final response = await _makeRequest('POST', '/vision/complete', body: body);
-        if (response.statusCode != 200 && response.statusCode != 201) {
-          _handleErrorResponse(response);
-          return null;
+      if (cleanAnswers.any((a) => a['type'] == 'descriptive')) {
+        for (final ans in cleanAnswers.where((a) => a['type'] == 'descriptive')) {
+          final body = {
+            'vision_id': int.tryParse(visionId),
+            'timing': timing,
+            'answer_type': 'text',
+            'question_id': ans['id'],
+            'answer_text': ans['answer'].toString(),
+          };
+          final response = await _makeRequest('POST', '/vision/complete', body: body);
+          if (response.statusCode != 200 && response.statusCode != 201) {
+            _handleErrorResponse(response);
+            return null;
+          }
         }
       }
 
       // Submit Image answers
-      for (final ans in cleanAnswers.where((a) => a['type'] == 'image')) {
-        try {
-          debugPrint('📸 Uploading image: $ans');
-
-          // Check file size first
-          final file = File(ans['image_path']);
-          final sizeInMB = file.lengthSync() / (1024 * 1024);
-          if (sizeInMB > 5) {  // 5MB limit
-            debugPrint('❌ File too large: ${sizeInMB.toStringAsFixed(1)}MB');
-            return {
-              'submission_successful': false,
-              'error': 'Image file too large (${sizeInMB.toStringAsFixed(1)}MB). Maximum size is 5MB.',
-            };
-          }
-
-          // Compress the image
-          debugPrint('🔄 Compressing image...');
-          final compressedFile = await FlutterImageCompress.compressAndGetFile(
-            ans['image_path'],
-            '${(await getTemporaryDirectory()).path}/compressed_${DateTime.now().millisecondsSinceEpoch}.jpg',
-            quality: 70,
-            minWidth: 1024,
-            minHeight: 1024,
-          );
-
-          if (compressedFile == null) {
-            debugPrint('❌ Compression failed');
-            throw Exception('Image compression failed');
-          }
-          final token = await _getAuthToken();
-          if (token == null) throw Exception('No authentication token');
-
-
-          final uri = Uri.parse('https://api.life-lab.org/v3/vision/complete');
-          final request = http.MultipartRequest('POST', uri)
-            ..fields['vision_id'] = visionId
-            ..fields['timing'] = timing
-            ..fields['answer_type'] = 'image'
-            ..fields['question_id'] = ans['id'].toString()
-            ..fields['description'] = ans['answer'] ?? ''
-            ..headers.addAll(_getHeaders(token));
-
+      if (cleanAnswers.any((a) => a['type'] == 'image')) {
+        for (final ans in cleanAnswers.where((a) => a['type'] == 'image')) {
           try {
-            request.files.add(await http.MultipartFile.fromPath(
-              'media',
-              compressedFile.path,
-            ));
+            debugPrint('📸 Uploading image: $ans');
+
+            // Check file size first
+            final file = File(ans['image_path']);
+            final sizeInMB = file.lengthSync() / (1024 * 1024);
+            if (sizeInMB > 5) {
+              debugPrint('❌ File too large: ${sizeInMB.toStringAsFixed(1)}MB');
+              return {
+                'submission_successful': false,
+                'error': 'Image file too large (${sizeInMB.toStringAsFixed(1)}MB). Maximum size is 5MB.',
+              };
+            }
+
+            // Compress the image
+            debugPrint('🔄 Compressing image...');
+            final compressedFile = await FlutterImageCompress.compressAndGetFile(
+              ans['image_path'],
+              '${(await getTemporaryDirectory()).path}/compressed_${DateTime.now().millisecondsSinceEpoch}.jpg',
+              quality: 70,
+              minWidth: 1024,
+              minHeight: 1024,
+            );
+
+            if (compressedFile == null) {
+              debugPrint('❌ Compression failed');
+              throw Exception('Image compression failed');
+            }
+
+            final token = await _getAuthToken();
+            if (token == null) throw Exception('No authentication token');
+
+            final uri = Uri.parse('https://api.life-lab.org/v3/vision/complete');
+            final request = http.MultipartRequest('POST', uri)
+              ..fields['vision_id'] = visionId
+              ..fields['timing'] = timing
+              ..fields['answer_type'] = 'image'
+              ..fields['question_id'] = ans['id'].toString()
+              ..fields['description'] = ans['answer'] ?? ''
+              ..headers.addAll(_getHeaders(token));
+
+            try {
+              request.files.add(await http.MultipartFile.fromPath(
+                'media',
+                compressedFile.path,
+              ));
+            } catch (e) {
+              debugPrint('❌ File error: $e');
+              return {
+                'submission_successful': false,
+                'error': 'Could not read image file.',
+              };
+            }
+
+            debugPrint('🔼 Uploading compressed image');
+            final streamed = await request.send();
+            final response = await http.Response.fromStream(streamed);
+            debugPrint('📤 Status: ${response.statusCode}');
+
+            if (response.statusCode != 200 && response.statusCode != 201) {
+              return {
+                'submission_successful': false,
+                'error': 'Image upload failed',
+                'server_response': response.body,
+                'submitted_at': DateTime.now().toIso8601String(),
+              };
+            }
           } catch (e) {
-            debugPrint('❌ File error: $e');
+            debugPrint('❌ Exception: $e');
             return {
               'submission_successful': false,
-              'error': 'Could not read image file.',
+              'error': 'Exception during image upload: $e',
             };
           }
-
-          debugPrint('🔼 Uploading compressed image KB)');
-              final streamed = await request.send();
-          final response = await http.Response.fromStream(streamed);
-          debugPrint('📤 Status: ${response.statusCode}');
-          debugPrint('📤 Body: ${response.body}');
-
-          if (response.statusCode != 200 && response.statusCode != 201) {
-            return {
-              'submission_successful': false,
-              'error': 'Image upload failed',
-              'server_response': response.body,
-              'submitted_at': DateTime.now().toIso8601String(),
-            };
-          }
-        } catch (e) {
-          debugPrint('❌ Exception: $e');
-          return {
-            'submission_successful': false,
-            'error': 'Exception during image upload: $e',
-          };
         }
       }
+
+      // Track vision completion with important properties
+      MixpanelService.track("Vision Completed", properties: {
+        "vision_id": visionId,
+        "timestamp": DateTime.now().toIso8601String(),
+        "answer_count": cleanAnswers.length,
+        "submission_type": cleanAnswers.length == answers.length ? "full" : "partial",
+        "has_mcq": cleanAnswers.any((a) => a['type'] == 'mcq'),
+        "has_descriptive": cleanAnswers.any((a) => a['type'] == 'descriptive'),
+        "has_image": cleanAnswers.any((a) => a['type'] == 'image'),
+        "completion_time": timing,
+      });
+
+      debugPrint('✅ Vision submission completed successfully');
+
       return {
         'submission_successful': true,
         'message': 'All answers submitted successfully',
@@ -458,8 +444,7 @@ class VisionAPIService {
       final submission = await submitVideoAnswers(visionId, answers);
 
       if (submission == null || submission['submission_successful'] != true) {
-        debugPrint(
-            '❌ Submission failed: ${submission?['error'] ?? 'Unknown error'}');
+        debugPrint('❌ Submission failed');
         return submission;
       }
 
@@ -470,12 +455,15 @@ class VisionAPIService {
 
       try {
         final result = await getQuizResult(visionId);
-        debugPrint('qqqqq $result');
+        debugPrint('✅ Quiz result retrieved');
+
+        final scoreSummary = _calculateScoreSummary(
+            result is List ? result : result['data'] ?? []);
+
         return {
           'submission_successful': true,
           'quiz_result': result,
-          'score_summary': _calculateScoreSummary(
-              result is List ? result : result['data'] ?? []),
+          'score_summary': scoreSummary,
           'submitted_at': submission['submitted_at'],
         };
       } catch (e) {
@@ -504,7 +492,6 @@ class VisionAPIService {
       final id = answer['id']?.toString();
       final value = answer['answer']?.toString().trim();
 
-      // Skip if id or value is null or empty
       if (id == null || value == null || value.isEmpty) {
         debugPrint('⚠️ Skipping invalid answer: $answer');
         continue;
@@ -516,7 +503,6 @@ class VisionAPIService {
         'type': answer['type']?.toString() ?? 'mcq',
       };
 
-      // Only add image_path if it's available and not null/empty
       if (answer.containsKey('image_path') &&
           answer['image_path']?.toString().isNotEmpty == true) {
         cleanedAnswer['image_path'] = answer['image_path'].toString();
@@ -532,11 +518,12 @@ class VisionAPIService {
     try {
       var visionID = int.tryParse(visionId);
       debugPrint('🔄 Fetching quiz result for vision: $visionID');
+
       final body = {
         'vision_id': int.tryParse(visionId),
       };
       final response =
-          await _makeRequest('POST', '/vision/result', body:body);
+      await _makeRequest('POST', '/vision/result', body: body);
 
       if (response.statusCode == 200) {
         final data = _parseResponse(response);
@@ -557,12 +544,23 @@ class VisionAPIService {
   Future<bool> skipQuiz(String visionId) async {
     try {
       debugPrint('🔄 Skipping quiz: $visionId');
+
       final response = await _makeRequest('POST', '/vision/skip',
           body: {'vision_id': visionId});
 
       if (response.statusCode == 200) {
         final data = _parseResponse(response) ?? {};
         debugPrint('✅ Quiz skipped');
+
+        // Track vision skipped with important properties
+        MixpanelService.track("Vision Skipped", properties: {
+          "vision_id": visionId,
+          "timestamp": DateTime.now().toIso8601String(),
+          "skip_reason": "user_initiated", // Could be enhanced with more context
+          "device_type": Platform.isAndroid ? "android" : Platform.isIOS ? "ios" : "other",
+          "app_version": "1.0.0", // Should be replaced with actual version
+        });
+
         return true;
       }
       _handleErrorResponse(response);

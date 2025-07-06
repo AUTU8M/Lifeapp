@@ -20,6 +20,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../common/helper/api_helper.dart';
 import '../../../../common/helper/color_code.dart';
+import '../../../../common/utils/mixpanel_service.dart';
 import '../../../../common/widgets/custom_button.dart';
 import '../../../../common/widgets/custom_text_field.dart';
 import '../../../../utils/storage_utils.dart';
@@ -590,6 +591,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 Loader.hide();
 
                 if (response.statusCode == 200) {
+                  MixpanelService.track("User Logged Out", properties: {
+                    "timestamp": DateTime.now().toIso8601String(),
+                  });
                   StorageUtil.clearData();
                   Fluttertoast.showToast(msg: "Logout Successfully");
                   push(

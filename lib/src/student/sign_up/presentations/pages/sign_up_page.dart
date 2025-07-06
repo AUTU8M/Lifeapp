@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 
 
+import '../../../../common/utils/mixpanel_service.dart';
 import '../../../../common/widgets/custom_button.dart';
 import '../../provider/sign_up_provider.dart';
 import '../widgets/grade_list_widget.dart';
@@ -277,13 +278,27 @@ class _SignUpPageState extends State<SignUpPage> {
               const SizedBox(height: 40),
               Padding(
                 padding: const EdgeInsets.only(left: 15, right: 15),
-                child: CustomButton(
+                child:CustomButton(
                   name: StringHelper.submit,
                   height: 50,
                   onTap: () {
+                    MixpanelService.track("Signup Button Clicked", properties: {
+                      "child_name": provider.chileNameController.text,
+                      "gender": provider.sexController.text,
+                      "dob": provider.dobController.text,
+                      "grade": provider.gradeController.text,
+                      "section": provider.sectionController.text,
+                      "school_code": provider.schoolCodeController.text,
+                      "school_name": provider.schoolNameController.text,
+                      "state": provider.stateController.text,
+                      "city": provider.cityController.text,
+                      "timestamp": DateTime.now().toIso8601String(),
+                    });
+
                     provider.registerStudent(context);
                   },
                 ),
+
               ),
 
               const SizedBox(height: 20),
