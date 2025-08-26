@@ -1,7 +1,5 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:lifelab3/src/common/widgets/loading_widget.dart';
-import 'package:lifelab3/src/student/home/presentations/widgets/home_mission_widget.dart';
 import 'package:lifelab3/src/student/home/provider/dashboard_provider.dart';
 import 'package:new_version_plus/new_version_plus.dart';
 import 'package:provider/provider.dart';
@@ -16,6 +14,7 @@ import '../widgets/invire_friend_widget.dart';
 import '../widgets/mentor_connect_widget.dart';
 import '../widgets/reward_widget.dart';
 import '../widgets/campaign_widget.dart'; // Make sure this is your CampaignSliderWidget
+import 'package:lifelab3/src/common/utils/mixpanel_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -72,6 +71,11 @@ class _HomePageState extends State<HomePage> {
           name: provider.dashboardModel!.data!.user!.name ?? "",
         )
             : null,
+        onDrawerChanged: (isOpened) {
+          if (!isOpened) {
+            MixpanelService.track('Drawer Closed'); // 🔥 Mixpanel Event
+          }
+        },
         body: SafeArea(  // <-- Wrap the body in SafeArea here
           child: SingleChildScrollView(
             padding: const EdgeInsets.only(left: 15, right: 15),

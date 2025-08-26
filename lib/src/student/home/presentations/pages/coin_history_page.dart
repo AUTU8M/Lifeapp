@@ -6,7 +6,7 @@ import 'package:lifelab3/src/student/home/provider/dashboard_provider.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/coin_history_model.dart';
-
+import 'package:lifelab3/src/common/utils/mixpanel_service.dart';
 class CoinsHistoryPage extends StatefulWidget {
   final String totalCoin;
 
@@ -19,6 +19,9 @@ class CoinsHistoryPage extends StatefulWidget {
   State<CoinsHistoryPage> createState() => _CoinsHistoryPageState();
 }
 
+late DateTime _startTime;
+late DateTime _endTime;
+
 class _CoinsHistoryPageState extends State<CoinsHistoryPage> {
   CoinsHistoryModel? coinsHistoryModel;
 
@@ -27,12 +30,26 @@ class _CoinsHistoryPageState extends State<CoinsHistoryPage> {
   @override
   void initState() {
     super.initState();
+    _startTime = DateTime.now();
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
       Provider.of<DashboardProvider>(context, listen: false)
           .getCoinHistoryData();
       isLoading = false;
       setState(() {});
     });
+  }
+
+  @override
+  void dispose() {
+    _endTime = DateTime.now(); // ✅ Track when screen is closed
+
+    final duration = _endTime.difference(_startTime).inSeconds;
+
+    MixpanelService.track("Total Coins Screen Viewed", properties: {
+      "duration_seconds": duration,
+    });
+
+    super.dispose();
   }
 
   @override
@@ -43,6 +60,7 @@ class _CoinsHistoryPageState extends State<CoinsHistoryPage> {
       appBar: commonAppBar(
         context: context,
         name: StringHelper.coins,
+
         action: Padding(
           padding: const EdgeInsets.all(15),
           child: Text(
